@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Heatmap Viewer</title>
+  <title>Heatmap Viewer 0.0.22</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
     body { font-family: sans-serif; margin: 20px; }
@@ -10,7 +10,7 @@
     .formula { font-style: italic; margin-bottom: 20px; }
     .header { display: flex; justify-content: space-between; align-items: flex-start; }
     .controls, .upload-box { flex: 1; }
-    .upload-box { max-width: 300px; border: 1px solid #ccc; padding: 10px; border-radius: 6px; }
+    .upload-box { max-width: 350px; border: 1px solid #ccc; padding: 12px; border-radius: 6px; }
     .control { margin-bottom: 12px; }
     label { font-weight: bold; margin-right: 6px; }
     select, input[type="number"], input[type="text"] { vertical-align: middle; }
@@ -30,19 +30,18 @@
 </head>
 <body>
 
-  <!-- 1. Title & formula :contentReference[oaicite:1]{index=1} -->
   <h2>Heatmap Viewer</h2>
   <div class="formula">
     <strong>Metric:</strong> H = (AR – AR<sub>min</sub>) / max(MD, MD<sub>min</sub>) (decimal)
   </div>
 
   <div class="header">
-    <!-- 6. Left panel: Metric Controls :contentReference[oaicite:2]{index=2} -->
+    <!-- LEFT PANEL: metric controls + symbol + source -->
     <div class="controls">
       <div class="control">
         <label for="symbolSelect">Symbol:</label>
         <select id="symbolSelect"></select>
-        <span id="sourceLabel">(Data Source: <strong id="sourceName">Exxahub</strong>)</span>
+        <span>(Source: <strong id="sourceName">Exxahub</strong>)</span>
       </div>
       <div class="control">
         <label for="arFloor">AR Min. (%):</label>
@@ -64,11 +63,11 @@
         <input type="number" id="zMin" step="0.01" value="-1">
         <label for="zMax">Max H:</label>
         <input type="number" id="zMax" step="0.01" value="1">
-        <span id="currentMaxH">Current Max H: --</span>
+        <div id="currentMaxH">Current Max H: ––</div>
       </div>
     </div>
 
-    <!-- 3–5. Right panel: Upload, Data Source & Conversion Toggle :contentReference[oaicite:3]{index=3} -->
+    <!-- RIGHT PANEL: upload, data-source, conversion, export -->
     <div class="upload-box">
       <div class="control">
         <label for="csvInput">Upload CSV:</label>
@@ -84,15 +83,12 @@
           <option>Other</option>
           <option selected>Unknown</option>
         </select>
-        <input type="text" id="customSource" placeholder="Custom source" style="display:none; margin-top:4px; width: 100%;">
+        <input type="text" id="customSource" placeholder="Custom source" style="display:none; width:100%; margin-top:6px;">
       </div>
       <div class="control">
-        <label>Convert Data:</label>
+        <label class="format-label">Convert Data:</label>
         <span>×0.01</span>
-        <label class="switch">
-          <input type="checkbox" id="percentToggle" checked>
-          <span class="slider"></span>
-        </label>
+        <label class="switch"><input type="checkbox" id="percentToggle" checked><span class="slider"></span></label>
         <span>×100</span>
       </div>
       <div class="control">
@@ -101,24 +97,117 @@
     </div>
   </div>
 
-  <!-- 7. Heatmap & 8. Hover panels :contentReference[oaicite:4]{index=4} -->
+  <!-- HEATMAP + EDGE HOVER LABELS -->
   <div id="edgeContainer">
     <div id="hoverY"></div>
     <div id="heatmap"></div>
   </div>
-  <div id="hoverX-container">
-    <div id="hoverX"></div>
-  </div>
+  <div id="hoverX-container"><div id="hoverX"></div></div>
+
 
   <script>
-    // JavaScript stubs for:
-    // - populating symbolSelect from CSVs
-    // - showing/hiding #customSource when "Other" is picked
-    // - reading AR/MD synonyms on parse
-    // - applying conversion toggle
-    // - drawing Plotly heatmap with z-range, colorscale, MD ceiling overlay
-    // - updating hoverX / hoverY on mousemove
-    // - exporting combined allData → CSV
-  </script>
-</body>
-</html>
+  // ————————————————————————————————————————————————
+  // Globals & DOM refs
+  let allData = {};               // { symbol: { x:[…], y:[…], ar:[][], md:[][], cm:[][] } }
+  let symbolOrder = [];           // controls dropdown order
+  let rawTexts = [];              // all CSV texts (initial + uploads)
+  const csvInput      = document.getElementById('csvInput');
+  const dataSourceSel = document.getElementById('dataSource');
+  const customSource  = document.getElementById('customSource');
+  const sourceName    = document.getElementById('sourceName');
+  const pctToggle     = document.getElementById('percentToggle');
+  const symbolSelect  = document.getElementById('symbolSelect');
+  const arFloor       = document.getElementById('arFloor');
+  const arFloorNum    = document.getElementById('arFloorNum');
+  const mdMin         = document.getElementById('mdMin');
+  const mdMinNum      = document.getElementById('mdMinNum');
+  const mdCeil        = document.getElementById('mdCeil');
+  const mdCeilNum     = document.getElementById('mdCeilNum');
+  const zMin          = document.getElementById('zMin');
+  const zMax          = document.getElementById('zMax');
+  const currentMaxH   = document.getElementById('currentMaxH');
+  const hoverX        = document.getElementById('hoverX');
+  const hoverY        = document.getElementById('hoverY');
+  const heatDiv       = document.getElementById('heatmap');
+  const exportBtn     = document.getElementById('exportBtn');
+
+  // — INITIAL LOAD: fetch preloaded CSV :contentReference[oaicite:1]{index=1}
+  document.addEventListener('DOMContentLoaded', ()=>{
+    fetch('data/FeaverSignalsFormatted.csv')
+      .then(r=>r.text())
+      .then(txt=>{
+        rawTexts.push(txt);
+        mergeCSV(txt);
+        populateSymbols();
+      })
+      .catch(err=>console.error('Could not load startup CSV', err));
+
+    // wire up UI events
+    dataSourceSel.onchange = () => {
+      customSource.style.display = dataSourceSel.value==='Other' ? 'block' : 'none';
+      updateSourceLabel();
+    };
+    customSource.oninput = updateSourceLabel;
+
+    csvInput.addEventListener('change', e=>{
+      const f = e.target.files[0];
+      if(!f) return;
+      const r = new FileReader();
+      r.onload = ev => {
+        rawTexts.push(ev.target.result);
+        mergeCSV(ev.target.result);
+        updateSourceLabel();
+        populateSymbols();
+        drawHeatmap();
+      };
+      r.readAsText(f);
+    });
+
+    pctToggle.addEventListener('change', ()=>{
+      // re-parse *all* texts
+      allData = {};
+      symbolOrder = [];
+      rawTexts.forEach(t=>mergeCSV(t));
+      populateSymbols();
+      drawHeatmap();
+    });
+
+    // sync sliders ↔ number inputs & redraw
+    [[arFloor,arFloorNum], [mdMin,mdMinNum], [mdCeil,mdCeilNum]]
+      .forEach(pair => pair.forEach(el=> el.oninput = ()=>{
+        pair[0].value = pair[1].value = el.value;
+        drawHeatmap();
+      }));
+    [zMin,zMax].forEach(el=> el.oninput = drawHeatmap);
+    symbolSelect.onchange = drawHeatmap;
+    exportBtn.onclick    = exportAllData;
+  });
+
+  // — UPDATE THE “Source:” LABEL NEXT TO SYMBOL
+  function updateSourceLabel(){
+    let ds = dataSourceSel.value;
+    if(ds==='Other') ds = customSource.value.trim()||'Other';
+    sourceName.textContent = ds;
+  }
+
+  // — MERGE A SINGLE CSV TEXT INTO allData (with header-synonym mapping)
+  function mergeCSV(text){
+    const lines = text.trim().split(/\r?\n/);
+    if(lines.length<2) return;
+    // identify columns by synonym
+    const hdrs = lines[0].split(',').map(h=>h.trim().toLowerCase());
+    const idx = nameList => hdrs.findIndex(h=> nameList.includes(h) );
+    const iSym = idx(['symbol','ticker','name']);
+    const iDay = idx(['day','days','window','lookback','timeframe','period']);
+    const iRsi = idx(['rsi','relative strength index']);
+    const iAr  = idx(['ar','cagr','annualized return','annual return']);
+    const iMd  = idx(['md','max drawdown','drawdown']);
+    const iCm  = idx(['calmar','calmar ratio']);
+    const recs = {};
+    for(let i=1;i<lines.length;i++){
+      const cols = lines[i].split(',');
+      if(cols.length<=Math.max(iSym,iDay,iRsi,iAr,iMd)) continue;
+      const s = cols[iSym], d = +cols[iDay], x = cols[iRsi];
+      let ar = parseFloat(cols[iAr]), md = parseFloat(cols[iMd]);
+      const cm = iCm>=0 ? parseFloat(cols[iCm]) : null;
+      if(pctToggle.checked){ ar/=100; md/=100; }
