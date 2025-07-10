@@ -15,7 +15,6 @@
     input[type=range] { width: 250px; vertical-align: middle; }
     input[type=number] { width: 60px; margin-left: 8px; }
     #currentMaxH { margin-left: 12px; font-weight: bold; }
-    .switch { position: relative; display: inline-block; width: 40px; height: 20px; margin: 0 6px; vertical-align: middle; }
     #edgeContainer { display: flex; align-items: flex-start; }
     #hoverY { width: 80px; text-align: right; margin-right: 8px; min-height: 60vh; line-height: 60vh; }
     #heatmap { flex: 1; height: 60vh; }
@@ -69,6 +68,10 @@
         </select>
         <input type="text" id="otherSourceBox" placeholder="Type here" style="display:none;" />
       </div>
+      <div class="control">
+        <label><input type="checkbox" id="decimalToPercentBox"> Decimal → %</label>
+        <span style="font-size:0.9em; color:#555;">(Tick if your CSV uses decimals like 0.08 for 8%)</span>
+      </div>
       <div class="control"><label>Upload CSV:</label><input type="file" id="csvInput" accept=".csv"></div>
     </div>
   </div>
@@ -93,7 +96,8 @@
           heatDiv = document.getElementById('heatmap'),
           dataSourceSelect = document.getElementById('dataSourceSelect'),
           otherSourceBox = document.getElementById('otherSourceBox'),
-          clearDataBtn = document.getElementById('clearDataBtn');
+          clearDataBtn = document.getElementById('clearDataBtn'),
+          decimalToPercentBox = document.getElementById('decimalToPercentBox');
 
     // Show or hide the Other input
     dataSourceSelect.addEventListener('change', () => {
@@ -144,7 +148,6 @@
       const reader = new FileReader();
       reader.onload = evt => {
         rawText = evt.target.result;
-        // get the chosen source
         let source = dataSourceSelect.value;
         if (source === "Other") {
           source = otherSourceBox.value.trim() || "Other";
@@ -212,11 +215,15 @@
       for (let i = 1; i < lines.length; ++i) {
         const c = lines[i].split(',');
         if (c.length < headers.length) continue;
-        // This is the new combo key
         const symSource = c[colIdx.symbol] + " (" + source + ")";
         const d = +c[colIdx.day];
         const x = c[colIdx.rsi];
         let ar = parseFloat(c[colIdx.ar]), md = parseFloat(c[colIdx.md]);
+        // NEW: Convert decimals to percent if checked
+        if (decimalToPercentBox && decimalToPercentBox.checked) {
+          ar *= 100;
+          md *= 100;
+        }
         const cm = (md === 0 ? null : ar / md);
         temp[symSource] = temp[symSource] || [];
         temp[symSource].push({ day: d, rsi: x, ar, md, cm });
@@ -276,7 +283,7 @@
           zmin: zminVal,
           zmax: zmaxVal,
           customdata: D.ar.map((r, i) => r.map((_, j) => [D.ar[i][j], D.md[i][j], D.cm[i][j], H[i][j]])),
-          hovertemplate: 'AR: %{customdata[0]:.2%}<br>MD: %{customdata[1]:.2%}<br>Calmar: %{customdata[2]:.2f}<br>H: %{customdata[3]:.3f}<extra></extra>'
+          hovertemplate: 'AR: %{customdata[0]:.2f}%<br>MD: %{customdata[1]:.2f}%<br>Calmar: %{customdata[2]:.2f}<br>H: %{customdata[3]:.3f}<extra></extra>'
         },
         {
           z: mask,
