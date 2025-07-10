@@ -79,7 +79,7 @@
 
     // Load default CSV on page load
     window.addEventListener('load', () => {
-      fetch('./data/FeaverSignalsFormatted.csv')
+      fetch('FeaverSignalsFormatted.csv')
         .then(r => r.text())
         .then(text => {
           rawText = text;
@@ -159,7 +159,7 @@
     }
 
     function computeH(ar, md, floor, minMD) {
-      return ar.map((row,i)=>row.map((v,j)=> v==null?null:(v-floor)/Math.max(md[i][j], minMD)));
+      return ar.map((row,i)=>row.map((v,j=> v==null?null:(v-floor)/Math.max(md[i][j], minMD))));
     }
 
     function drawHeatmap() {
@@ -178,10 +178,8 @@
       currentMaxH.textContent = 'Current Max H: ' + maxH.toFixed(3);
       Plotly.newPlot(heatDiv, [
         { z: H, x: D.x, y: D.y, type: 'heatmap', colorscale: [[0,'green'],[0.5,'yellow'],[1,'red']], zmin: zminVal, zmax: zmaxVal,
-          customdata: D.ar.map((r,i)=>r.map((_,j)=>[D.ar[i][j],D.md[i][j],D.cm[i][j],H[i][j]])),
-          hovertemplate: 'AR: %{customdata[0]:.2%}<br>MD: %{customdata[1]:.2%}<br>Calmar: %{customdata[2]:.2f}<br>H: %{customdata[3]:.3f}<extra></extra>' },
-        { z: mask, x: D.x, y: D.y, type: 'heatmap', showscale: false,
-          colorscale: [[0,'rgba(0,0,0,0)'],[1,'rgba(0,0,0,0.5)']], hoverinfo: 'skip' }
+          customdata: D.ar.map((r,i)=>r.map((_,j=>[D.ar[i][j],D.md[i][j],D.cm[i][j],H[i][j]]))),
+          hovertemplate: 'AR: %{customdata[0]:.2%}<br>MD: %{customdata[1]:.2%}<br>Calmar: %{customdata[2]:.2f}<br>H: %{customdata[3]:.3f}<extra></extra>' }
       ], { margin:{l:60,r:60,t:60,b:60}, xaxis:{title:'RSI Threshold'}, yaxis:{title:'Lookback (days')} }, {responsive:true});
       heatDiv.on('plotly_hover', data => { const pt=data.points[0]; hoverX.innerText='RSI: '+pt.x; hoverY.innerText='Day: '+pt.y; });
       heatDiv.on('plotly_unhover', ()=>{ hoverX.innerText=''; hoverY.innerText=''; });
