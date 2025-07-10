@@ -22,6 +22,8 @@
     #hoverX-container { display: flex; justify-content: center; margin-top: 8px; }
     #hoverX { font-style: italic; color: #333; }
     #otherSourceBox { width: 80px; font-size: 0.9em; margin-left: 6px; }
+    #clearDataBtn { margin-left: 12px; padding: 2px 12px; border-radius: 6px; border: 1px solid #aaa; background: #fafafa; cursor: pointer; }
+    #clearDataBtn:hover { background: #eee; }
   </style>
 </head>
 <body>
@@ -31,7 +33,11 @@
   </div>
   <div class="header">
     <div class="controls">
-      <div class="control"><label>Symbol:</label><select id="symbolSelect"></select></div>
+      <div class="control" style="display: flex; align-items: center;">
+        <label>Symbol:</label>
+        <select id="symbolSelect"></select>
+        <button id="clearDataBtn">Clear Data</button>
+      </div>
       <div class="control"><label>AR Min. (%):</label>
         <input type="range" id="arFloor" min="0" max="100" step="0.1" value="3">
         <input type="number" id="arFloorNum" min="0" max="100" step="0.1" value="3">
@@ -86,11 +92,22 @@
           currentMaxH = document.getElementById('currentMaxH'),
           heatDiv = document.getElementById('heatmap'),
           dataSourceSelect = document.getElementById('dataSourceSelect'),
-          otherSourceBox = document.getElementById('otherSourceBox');
+          otherSourceBox = document.getElementById('otherSourceBox'),
+          clearDataBtn = document.getElementById('clearDataBtn');
 
     // Show or hide the Other input
     dataSourceSelect.addEventListener('change', () => {
       otherSourceBox.style.display = dataSourceSelect.value === "Other" ? "" : "none";
+    });
+
+    // CLEAR DATA BUTTON LOGIC
+    clearDataBtn.addEventListener('click', () => {
+      allData = {};
+      symbolSelect.innerHTML = '';
+      Plotly.purge(heatDiv);
+      hoverX.innerText = '';
+      hoverY.innerText = '';
+      currentMaxH.textContent = 'Current Max H: --';
     });
 
     // AUTOLOAD CSV ON PAGE LOAD (default source = "Exxahub")
