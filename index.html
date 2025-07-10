@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -38,13 +37,27 @@
   <div class="header">
     <div class="controls">
       <div class="control"><label>Symbol:</label><select id="symbolSelect"></select></div>
-      <div class="control"><label>AR Min. (%):</label><input type="range" id="arFloor" min="0" max="100" step="0.1" value="3"><input type="number" id="arFloorNum" min="0" max="100" step="0.1" value="3"></div>
-      <div class="control"><label>MD Min. (%):</label><input type="range" id="mdMin" min="0" max="100" step="0.1" value="5"><input type="number" id="mdMinNum" min="0" max="100" step="0.1" value="5"></div>
-      <div class="control"><label>MD Max (%):</label><input type="range" id="mdCeil" min="0" max="100" step="0.1" value="50"><input type="number" id="mdCeilNum" min="0" max="100" step="0.1" value="50"></div>
-      <div class="control"><label>Colorbar Min H:</label><input type="number" id="zMin" step="0.01" value="-1"><label>Colorbar Max H:</label><input type="number" id="zMax" step="0.01" value="1"><span id="currentMaxH">Current Max H: --</span></div>
+      <div class="control"><label>AR Min. (%):</label>
+        <input type="range" id="arFloor" min="0" max="100" step="0.1" value="3">
+        <input type="number" id="arFloorNum" min="0" max="100" step="0.1" value="3">
+      </div>
+      <div class="control"><label>MD Min. (%):</label>
+        <input type="range" id="mdMin" min="0" max="100" step="0.1" value="5">
+        <input type="number" id="mdMinNum" min="0" max="100" step="0.1" value="5">
+      </div>
+      <div class="control"><label>MD Max (%):</label>
+        <input type="range" id="mdCeil" min="0" max="100" step="0.1" value="50">
+        <input type="number" id="mdCeilNum" min="0" max="100" step="0.1" value="50">
+      </div>
+      <div class="control"><label>Colorbar Min H:</label>
+        <input type="number" id="zMin" step="0.01" value="-1">
+        <label>Colorbar Max H:</label>
+        <input type="number" id="zMax" step="0.01" value="1">
+        <span id="currentMaxH">Current Max H: --</span>
+      </div>
     </div>
     <div class="upload-box">
-        <div class="control"><label>Upload CSV:</label><input type="file" id="csvInput" accept=".csv"></div>
+      <div class="control"><label>Upload CSV:</label><input type="file" id="csvInput" accept=".csv"></div>
       <div class="toggle-box">
         <label>Data Conversion:</label>
         <span class="format-label">×0.01</span>
@@ -54,13 +67,12 @@
         </label>
         <span class="format-label">×100</span>
       </div>
-
-      </div></div>
-      </div>
+    </div>
+  </div>
   <div id="edgeContainer"><div id="hoverY"></div><div id="heatmap"></div></div>
   <div id="hoverX-container"><div id="hoverX"></div></div>
   <script>
-    let allData = {}
+    let allData = {};
     let rawText = null;
     const csvInput = document.getElementById('csvInput'),
           pctToggle = document.getElementById('percentToggle'),
@@ -78,6 +90,23 @@
           currentMaxH = document.getElementById('currentMaxH'),
           heatDiv = document.getElementById('heatmap');
 
+    // AUTOLOAD CSV ON PAGE LOAD
+    window.addEventListener('DOMContentLoaded', () => {
+      fetch('data/LoadDataTQQQ.csv')
+        .then(response => {
+          if (!response.ok) throw new Error('Network response was not ok');
+          return response.text();
+        })
+        .then(csvText => {
+          rawText = csvText;
+          buildFromText(csvText);
+          populateSymbols();
+        })
+        .catch(error => {
+          console.log('Autoload CSV error:', error);
+        });
+    });
+
     function populateSymbols() {
       symbolSelect.innerHTML = '';
       Object.keys(allData).forEach(s => {
@@ -91,7 +120,8 @@
       }
     }
 
-    window.addEventListener('load', populateSymbols);
+    // (Optionally remove or comment this line, since it's now handled above)
+    // window.addEventListener('load', populateSymbols);
 
     csvInput.addEventListener('change', e => {
       const reader = new FileReader();
@@ -126,82 +156,81 @@
     symbolSelect.onchange = drawHeatmap;
 
     function buildFromText(text) {
-  const lines = text.trim().split(/\r?\n/);
-  if (!lines.length) return;
+      const lines = text.trim().split(/\r?\n/);
+      if (!lines.length) return;
 
-  // Define allowed header names (case-insensitive)
-  const headerMap = {
-    symbol: ['symbol', 'ticker', 'name'],
-    day: ['day', 'days', 'timeframe', 'window', 'period', 'lookback'],
-    rsi: ['rsi', 'relative strength index'],
-    ar: ['ar', 'annualized return', 'cagr'],
-    md: ['md', 'max drawdown', 'drawdown']
-    // Calmar will be calculated, not loaded
-  };
+      // Define allowed header names (case-insensitive)
+      const headerMap = {
+        symbol: ['symbol', 'ticker', 'name'],
+        day: ['day', 'days', 'timeframe', 'window', 'period', 'lookback'],
+        rsi: ['rsi', 'relative strength index'],
+        ar: ['ar', 'annualized return', 'cagr'],
+        md: ['md', 'max drawdown', 'drawdown']
+        // Calmar will be calculated, not loaded
+      };
 
-  // Helper: Find the column index for a field
-  function findCol(headers, aliases) {
-    for (let i = 0; i < headers.length; ++i) {
-      const h = headers[i].trim().toLowerCase();
-      if (aliases.includes(h)) return i;
+      // Helper: Find the column index for a field
+      function findCol(headers, aliases) {
+        for (let i = 0; i < headers.length; ++i) {
+          const h = headers[i].trim().toLowerCase();
+          if (aliases.includes(h)) return i;
+        }
+        return -1;
+      }
+
+      // Parse header
+      const headers = lines[0].split(',');
+      const colIdx = {};
+      Object.keys(headerMap).forEach(key => {
+        const idx = findCol(
+          headers,
+          headerMap[key].map(s => s.toLowerCase())
+        );
+        if (idx === -1) {
+          throw new Error(`Missing column for ${key} (${headerMap[key].join('/')})`);
+        }
+        colIdx[key] = idx;
+      });
+
+      // Prepare data container
+      const temp = {};
+
+      // Parse rows
+      for (let i = 1; i < lines.length; ++i) {
+        const c = lines[i].split(',');
+        if (c.length < headers.length) continue;
+        const s = c[colIdx.symbol];
+        const d = +c[colIdx.day];
+        const x = c[colIdx.rsi];
+        let ar = parseFloat(c[colIdx.ar]), md = parseFloat(c[colIdx.md]);
+        // Apply % toggle if enabled
+        if (pctToggle.checked) { ar /= 100; md /= 100; }
+        const cm = (md === 0 ? null : ar / md); // Calmar calculation
+        temp[s] = temp[s] || [];
+        temp[s].push({ day: d, rsi: x, ar, md, cm });
+      }
+
+      // Rebuild allData as before
+      allData = {};
+      Object.keys(temp).forEach(s => {
+        const arr = temp[s];
+        const xs = Array.from(new Set(arr.map(o => o.rsi))).sort();
+        const ys = Array.from(new Set(arr.map(o => o.day))).sort((a, b) => a - b);
+        const arM = ys.map(y => xs.map(x => {
+          const rec = arr.find(o => o.day === y && o.rsi === x);
+          return rec ? rec.ar : null;
+        }));
+        const mdM = ys.map(y => xs.map(x => {
+          const rec = arr.find(o => o.day === y && o.rsi === x);
+          return rec ? rec.md : null;
+        }));
+        const cmM = ys.map(y => xs.map(x => {
+          const rec = arr.find(o => o.day === y && o.rsi === x);
+          return rec ? rec.cm : null;
+        }));
+        allData[s] = { x: xs, y: ys, ar: arM, md: mdM, cm: cmM };
+      });
     }
-    return -1;
-  }
-
-  // Parse header
-  const headers = lines[0].split(',');
-  const colIdx = {};
-  Object.keys(headerMap).forEach(key => {
-    const idx = findCol(
-      headers,
-      headerMap[key].map(s => s.toLowerCase())
-    );
-    if (idx === -1) {
-      throw new Error(`Missing column for ${key} (${headerMap[key].join('/')})`);
-    }
-    colIdx[key] = idx;
-  });
-
-  // Prepare data container
-  const temp = {};
-
-  // Parse rows
-  for (let i = 1; i < lines.length; ++i) {
-    const c = lines[i].split(',');
-    if (c.length < headers.length) continue;
-    const s = c[colIdx.symbol];
-    const d = +c[colIdx.day];
-    const x = c[colIdx.rsi];
-    let ar = parseFloat(c[colIdx.ar]), md = parseFloat(c[colIdx.md]);
-    // Apply % toggle if enabled
-    if (pctToggle.checked) { ar /= 100; md /= 100; }
-    const cm = (md === 0 ? null : ar / md); // Calmar calculation
-    temp[s] = temp[s] || [];
-    temp[s].push({ day: d, rsi: x, ar, md, cm });
-  }
-
-  // Rebuild allData as before
-  allData = {};
-  Object.keys(temp).forEach(s => {
-    const arr = temp[s];
-    const xs = Array.from(new Set(arr.map(o => o.rsi))).sort();
-    const ys = Array.from(new Set(arr.map(o => o.day))).sort((a, b) => a - b);
-    const arM = ys.map(y => xs.map(x => {
-      const rec = arr.find(o => o.day === y && o.rsi === x);
-      return rec ? rec.ar : null;
-    }));
-    const mdM = ys.map(y => xs.map(x => {
-      const rec = arr.find(o => o.day === y && o.rsi === x);
-      return rec ? rec.md : null;
-    }));
-    const cmM = ys.map(y => xs.map(x => {
-      const rec = arr.find(o => o.day === y && o.rsi === x);
-      return rec ? rec.cm : null;
-    }));
-    allData[s] = { x: xs, y: ys, ar: arM, md: mdM, cm: cmM };
-  });
-}
-
 
     function computeH(ar, md, floor, minMD) {
       return ar.map((row, i) => row.map((v, j) => v == null ? null : (v - floor) / Math.max(md[i][j], minMD)));
