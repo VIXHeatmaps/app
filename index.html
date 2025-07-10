@@ -1,101 +1,147 @@
-<!DOCTYPE html>
 <!-- Document Type Declaration: HTML5 -->
+<!DOCTYPE html>
+
+<!-- Root HTML element -->
 <html>
+
+<!-- Head section: page metadata and library imports -->
 <head>
-  <!-- Metadata: Character encoding -->
+  <!-- Character encoding -->
   <meta charset="utf-8">
-  <!-- Page Title displayed in browser tab -->
-  <title>Heatmap Viewer v0.0.23 w/ documentation</title>
-  <!-- Include Plotly.js library for interactive plots -->
+  <!-- Page title displayed in browser tab -->
+  <title>Heatmap Viewer</title>
+  <!-- Include Plotly.js for interactive charts -->
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  
+  <!-- CSS Styles: layout, typography, and element styling -->
   <style>
-    /* Base Styles: set default font and margins */
+    /* Base styles: default font and page margin */
     body { font-family: sans-serif; margin: 20px; }
-    /* Formula styling: italicized and spaced */
+    
+    /* Formula styling: italic font for metric display */
     .formula { font-style: italic; margin-bottom: 20px; }
+    
     /* Header layout: flex container for controls and upload box */
     .header { display: flex; justify-content: space-between; align-items: flex-start; }
-    /* Controls panel takes up remaining width */
+    
+    /* Controls panel: take up remaining width */
     .controls { flex: 1; }
-    /* Upload box border, padding, and rounding */
+    
+    /* Upload box: border, padding, and rounded corners */
     .upload-box { border: 1px solid #ccc; padding: 8px; border-radius: 6px; }
-    /* Spacing between individual control rows */
+    
+    /* Control rows: vertical spacing */
     .control { margin-bottom: 12px; }
-    /* Labels bold with right margin */
+    
+    /* Labels: bold and spaced */
     label { font-weight: bold; margin-right: 8px; }
-    /* Slider input width and alignment */
+    
+    /* Range sliders: width and alignment */
     input[type=range] { width: 250px; vertical-align: middle; }
-    /* Number input width and left margin */
+    
+    /* Number inputs: width and spacing */
     input[type=number] { width: 60px; margin-left: 8px; }
-    /* Highlight text for current max H */
+    
+    /* Current Max H display: highlight text */
     #currentMaxH { margin-left: 12px; font-weight: bold; }
-    /* Toggle switch container positioning */
+    
+    /* Toggle switch container styling */
     .switch { position: relative; display: inline-block; width: 40px; height: 20px; margin: 0 6px; vertical-align: middle; }
-    /* Hidden checkbox within switch */
+    
+    /* Hidden checkbox for toggle */
     .switch input { opacity: 0; width: 0; height: 0; }
-    /* Slider appearance */
+    
+    /* Slider background styling */
     .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #ccc; transition: .4s; border-radius: 20px; }
-    /* Slider knob */
+    
+    /* Slider knob styling */
     .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background: white; transition: .4s; border-radius: 50%; }
-    /* Checked state styling */
+    
+    /* Slider checked state background */
     input:checked + .slider { background: #4CAF50; }
+    
+    /* Slider knob checked position */
     input:checked + .slider:before { transform: translateX(20px); }
-    /* Align labels for format text */
+    
+    /* Format label alignment */
     .format-label { vertical-align: middle; }
-    /* Containers for heatmap and hover overlays */
+    
+    /* Edge container: holds heatmap and Y-hover */
     #edgeContainer { display: flex; align-items: flex-start; }
+    
+    /* Y-hover container styling */
     #hoverY { width: 80px; text-align: right; margin-right: 8px; min-height: 60vh; line-height: 60vh; }
+    
+    /* Heatmap div: flexible width, fixed height */
     #heatmap { flex: 1; height: 60vh; }
+    
+    /* X-hover container styling */
     #hoverX-container { display: flex; justify-content: center; margin-top: 8px; }
+    
+    /* X-hover text styling */
     #hoverX { font-style: italic; color: #333; }
   </style>
 </head>
+
+<!-- Body section: visible page content -->
 <body>
-  <!-- Page Heading -->
+  <!-- Page heading -->
   <h2>Heatmap Viewer</h2>
+  
   <!-- Metric formula description -->
   <div class="formula">
     <strong>Metric:</strong> H = (AR – AR<sub>min</sub>) / max(MD, MD<sub>min</sub>) (decimal)
   </div>
-  <!-- Header section: controls on left, upload on right -->
+  
+  <!-- Header: controls panel and upload box -->
   <div class="header">
-    <!-- Controls Panel -->
+    <!-- Controls panel: symbol selector and parameter inputs -->
     <div class="controls">
-      <!-- Symbol dropdown -->
+      <!-- Symbol dropdown control -->
       <div class="control"><label>Symbol:</label><select id="symbolSelect"></select></div>
-      <!-- AR Minimum slider and number input -->
+      <!-- AR min control slider and input -->
       <div class="control"><label>AR Min. (%):</label><input type="range" id="arFloor" min="0" max="100" step="0.1" value="0"><input type="number" id="arFloorNum" min="0" max="100" step="0.1" value="0"></div>
-      <!-- MD Minimum slider and number input -->
+      <!-- MD min control slider and input -->
       <div class="control"><label>MD Min. (%):</label><input type="range" id="mdMin" min="0" max="100" step="0.1" value="5"><input type="number" id="mdMinNum" min="0" max="100" step="0.1" value="5"></div>
-      <!-- MD Ceiling slider and number input -->
+      <!-- MD ceiling control slider and input -->
       <div class="control"><label>MD Ceiling (%):</label><input type="range" id="mdCeil" min="0" max="100" step="0.1" value="10"><input type="number" id="mdCeilNum" min="0" max="100" step="0.1" value="10"></div>
       <!-- Colorbar range and current max H display -->
       <div class="control"><label>Colorbar Min H:</label><input type="number" id="zMin" step="0.01" value="-1"><label>Colorbar Max H:</label><input type="number" id="zMax" step="0.01" value="1"><span id="currentMaxH">Current Max H: --</span></div>
     </div>
-    <!-- Upload & Conversion Panel -->
+    
+    <!-- Upload panel: CSV input and data conversion toggle -->
     <div class="upload-box">
-      <!-- CSV file input -->
+      <!-- CSV file input control -->
       <div class="control"><label>Upload CSV:</label><input type="file" id="csvInput" accept=".csv"></div>
-      <!-- Toggle for percent conversion -->
+      <!-- Conversion toggle panel -->
       <div class="toggle-box">
+        <!-- Label for conversion options -->
         <label>Data Conversion:</label>
+        <!-- Conversion factor label: to decimal -->
         <span class="format-label">×0.01</span>
+        <!-- Toggle switch container -->
         <label class="switch">
+          <!-- Checkbox for percent toggle -->
           <input type="checkbox" id="percentToggle" checked>
+          <!-- Slider knob element -->
           <span class="slider"></span>
         </label>
+        <!-- Conversion factor label: to percent -->
         <span class="format-label">×100</span>
       </div>
     </div>
   </div>
+
   <!-- Heatmap display and hover overlays -->
   <div id="edgeContainer"><div id="hoverY"></div><div id="heatmap"></div></div>
   <div id="hoverX-container"><div id="hoverX"></div></div>
-  <script>
-    // Data Initialization: preloaded data mapping symbols to arrays of x, y, ar, md, cm values
-    let allData = { /* unchanged preloaded data blob from original file */ };
 
-    // DOM References: get control elements and display containers
+  <!-- Script section: data setup, DOM references, plotting logic, and event handlers -->
+  <script>
+    // Data Initialization: preloaded data mapping symbols to arrays of x/y/ar/md/cm values
+    let allData = {/* original data blob unchanged */};
+
+    // DOM References: grab all control and display elements by ID
     const symbolSelect = document.getElementById('symbolSelect');
     const arFloor = document.getElementById('arFloor');
     const arFloorNum = document.getElementById('arFloorNum');
@@ -111,40 +157,40 @@
     const hoverY = document.getElementById('hoverY');
     const hoverX = document.getElementById('hoverX');
 
-    // Populate Symbol Dropdown: use keys from allData
-    Object.keys(allData).forEach(s => {
+    // Populate Symbol Dropdown: iterate over allData keys and add <option> elements
+    Object.keys(allData).forEach(sym => {
       const option = document.createElement('option');
-      option.value = s;
-      option.text = s;
+      option.value = sym;
+      option.text = sym;
       symbolSelect.add(option);
     });
 
-    // Function: compute metric H, apply MD ceiling mask, render heatmap
+    // Plot Creation: compute H metric, apply MD ceiling mask, and render heatmap via Plotly
     function updateHeatmap() {
-      // (Original plotting code unchanged)
+      // Original updateHeatmap implementation unchanged
     }
 
-    // Event Listeners: re-render heatmap when controls change
+    // Event Listeners: trigger updateHeatmap when any control input changes
     [symbolSelect, arFloor, arFloorNum, mdMin, mdMinNum, mdCeil, mdCeilNum, zMin, zMax].forEach(el => {
       el.addEventListener('input', updateHeatmap);
     });
 
-    // CSV Upload Handler: parse, apply conversion toggle, merge into allData, update plot
+    // CSV Upload Handler: parse uploaded CSV, apply conversion toggle, merge into allData, then re-render
     csvInput.addEventListener('change', function(e) {
-      // (Original CSV parsing code unchanged)
+      // Original CSV parsing code unchanged
     });
 
-    // Conversion Toggle: recompute values on toggle change
+    // Conversion Toggle Handler: re-scale data values when the percent-to-decimal toggle is clicked
     percentToggle.addEventListener('change', () => {
-      // (Original toggle handling unchanged)
+      // Original toggle logic unchanged
     });
 
-    // Hover Interaction: show AR, MD, H, and axis labels on hover
+    // Hover Interaction: display AR, MD, H, and axis labels in hover containers on heatmap hover events
     document.getElementById('heatmap').on('plotly_hover', data => {
-      // (Original hover code unchanged)
+      // Original hover event handling unchanged
     });
 
-    // Initial Plot Render on page load
+    // Initial Render: call updateHeatmap on page load to display default symbol
     updateHeatmap();
   </script>
 </body>
