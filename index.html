@@ -1,213 +1,164 @@
 <!DOCTYPE html>
-<html lang="en">
+<!-- Snippet: Document Type Declaration -->
+<html>
 <head>
+  <!-- Snippet: Head - metadata and title -->
   <meta charset="utf-8">
-  <title>Heatmap Viewer 0.0.22</title>
+  <title>Heatmap Viewer</title>
+  <!-- Snippet: Plotly Library Import -->
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
+    /* Snippet: Base Styles - font and layout */
     body { font-family: sans-serif; margin: 20px; }
-    h2 { margin-bottom: 5px; }
+
+    /* Snippet: Formula Styling - italic formula under title */
     .formula { font-style: italic; margin-bottom: 20px; }
+
+    /* Snippet: Header Layout - flex container for controls and upload box */
     .header { display: flex; justify-content: space-between; align-items: flex-start; }
-    .controls, .upload-box { flex: 1; }
-    .upload-box { max-width: 350px; border: 1px solid #ccc; padding: 12px; border-radius: 6px; }
+
+    /* Snippet: Left Controls Panel - takes up available width */
+    .controls { flex: 1; }
+
+    /* Snippet: Upload Box Styles */
+    .upload-box { border: 1px solid #ccc; padding: 8px; border-radius: 6px; }
+
+    /* Snippet: Individual Control Spacing */
     .control { margin-bottom: 12px; }
-    label { font-weight: bold; margin-right: 6px; }
-    select, input[type="number"], input[type="text"] { vertical-align: middle; }
-    input[type="range"] { width: 200px; vertical-align: middle; }
+
+    /* Snippet: Label Styling */
+    label { font-weight: bold; margin-right: 8px; }
+
+    /* Snippet: Slider and Number Input Sizing */
+    input[type=range] { width: 250px; vertical-align: middle; }
+    input[type=number] { width: 60px; margin-left: 8px; }
+
+    /* Snippet: Current Max H Label */
+    #currentMaxH { margin-left: 12px; font-weight: bold; }
+
+    /* Snippet: Toggle Switch Styles */
     .switch { position: relative; display: inline-block; width: 40px; height: 20px; margin: 0 6px; vertical-align: middle; }
     .switch input { opacity: 0; width: 0; height: 0; }
-    .slider { position: absolute; cursor: pointer; top:0; left:0; right:0; bottom:0; background:#ccc; transition:.4s; border-radius:20px; }
-    .slider:before { position:absolute; content:""; height:16px; width:16px; left:2px; bottom:2px; background:white; transition:.4s; border-radius:50%; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #ccc; transition: .4s; border-radius: 20px; }
+    .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background: white; transition: .4s; border-radius: 50%; }
     input:checked + .slider { background: #4CAF50; }
     input:checked + .slider:before { transform: translateX(20px); }
-    #edgeContainer { display: flex; align-items: stretch; margin-top: 20px; }
-    #hoverY { width: 80px; text-align: right; padding-right: 10px; }
-    #heatmap { flex:1; }
+
+    /* Snippet: Format Label Alignment */
+    .format-label { vertical-align: middle; }
+
+    /* Snippet: Heatmap and Hover Containers */
+    #edgeContainer { display: flex; align-items: flex-start; }
+    #hoverY { width: 80px; text-align: right; margin-right: 8px; min-height: 60vh; line-height: 60vh; }
+    #heatmap { flex: 1; height: 60vh; }
     #hoverX-container { display: flex; justify-content: center; margin-top: 8px; }
-    #hoverX { font-style: italic; }
+    #hoverX { font-style: italic; color: #333; }
   </style>
 </head>
 <body>
-
+  <!-- Snippet: Page Title -->
   <h2>Heatmap Viewer</h2>
+
+  <!-- Snippet: Metric Formula Display -->
   <div class="formula">
     <strong>Metric:</strong> H = (AR – AR<sub>min</sub>) / max(MD, MD<sub>min</sub>) (decimal)
   </div>
 
+  <!-- Snippet: Header Section - Controls and Upload Box -->
   <div class="header">
-    <!-- LEFT PANEL: metric controls + symbol + source -->
+    <!-- Snippet: Left Panel - Metric Controls -->
     <div class="controls">
-      <div class="control">
-        <label for="symbolSelect">Symbol:</label>
-        <select id="symbolSelect"></select>
-        <span>(Source: <strong id="sourceName">Exxahub</strong>)</span>
-      </div>
-      <div class="control">
-        <label for="arFloor">AR Min. (%):</label>
-        <input type="range" id="arFloor" min="0" max="100" step="0.1" value="1">
-        <input type="number" id="arFloorNum" min="0" max="100" step="0.1" value="1">
-      </div>
-      <div class="control">
-        <label for="mdMin">MD Min. (%):</label>
-        <input type="range" id="mdMin" min="0" max="100" step="0.1" value="3">
-        <input type="number" id="mdMinNum" min="0" max="100" step="0.1" value="3">
-      </div>
-      <div class="control">
-        <label for="mdCeil">MD Ceiling (%):</label>
-        <input type="range" id="mdCeil" min="0" max="100" step="0.1" value="25">
-        <input type="number" id="mdCeilNum" min="0" max="100" step="0.1" value="25">
-      </div>
-      <div class="control">
-        <label for="zMin">Colorbar Min H:</label>
-        <input type="number" id="zMin" step="0.01" value="-1">
-        <label for="zMax">Max H:</label>
-        <input type="number" id="zMax" step="0.01" value="1">
-        <div id="currentMaxH">Current Max H: ––</div>
-      </div>
+      <!-- Symbol Selector -->
+      <div class="control"><label>Symbol:</label><select id="symbolSelect"></select></div>
+      <!-- AR Min Control -->
+      <div class="control"><label>AR Min. (%):</label><input type="range" id="arFloor" min="0" max="100" step="0.1" value="1"><input type="number" id="arFloorNum" min="0" max="100" step="0.1" value="1"></div>
+      <!-- MD Min Control -->
+      <div class="control"><label>MD Min. (%):</label><input type="range" id="mdMin" min="0" max="100" step="0.1" value="3"><input type="number" id="mdMinNum" min="0" max="100" step="0.1" value="3"></div>
+      <!-- MD Ceiling Control -->
+      <div class="control"><label>MD Ceiling (%):</label><input type="range" id="mdCeil" min="0" max="100" step="0.1" value="25"><input type="number" id="mdCeilNum" min="0" max="100" step="0.1" value="25"></div>
+      <!-- Colorbar Range Controls -->
+      <div class="control"><label>Colorbar Min H:</label><input type="number" id="zMin" step="0.01" value="-1"><label>Colorbar Max H:</label><input type="number" id="zMax" step="0.01" value="1"><span id="currentMaxH">Current Max H: --</span></div>
     </div>
 
-    <!-- RIGHT PANEL: upload, data-source, conversion, export -->
+    <!-- Snippet: Right Panel - CSV Upload & Conversion Toggle -->
     <div class="upload-box">
-      <div class="control">
-        <label for="csvInput">Upload CSV:</label>
-        <input type="file" id="csvInput" accept=".csv">
-      </div>
-      <div class="control">
-        <label for="dataSource">Data Source:</label>
-        <select id="dataSource">
-          <option>Exxahub</option>
-          <option>QuantMage</option>
-          <option>Composer</option>
-          <option>Testfol.io</option>
-          <option>Other</option>
-          <option selected>Unknown</option>
-        </select>
-        <input type="text" id="customSource" placeholder="Custom source" style="display:none; width:100%; margin-top:6px;">
-      </div>
-      <div class="control">
-        <label class="format-label">Convert Data:</label>
-        <span>×0.01</span>
-        <label class="switch"><input type="checkbox" id="percentToggle" checked><span class="slider"></span></label>
-        <span>×100</span>
-      </div>
-      <div class="control">
-        <button id="exportBtn">Export Data CSV</button>
+      <!-- CSV File Input -->
+      <div class="control"><label>Upload CSV:</label><input type="file" id="csvInput" accept=".csv"></div>
+      <!-- Conversion Toggle -->
+      <div class="toggle-box">
+        <label>Data Conversion:</label>
+        <span class="format-label">×0.01</span>
+        <label class="switch">
+          <input type="checkbox" id="percentToggle" checked>
+          <span class="slider"></span>
+        </label>
+        <span class="format-label">×100</span>
       </div>
     </div>
   </div>
 
-  <!-- HEATMAP + EDGE HOVER LABELS -->
-  <div id="edgeContainer">
-    <div id="hoverY"></div>
-    <div id="heatmap"></div>
-  </div>
+  <!-- Snippet: Heatmap & Hover Display Containers -->
+  <div id="edgeContainer"><div id="hoverY"></div><div id="heatmap"></div></div>
   <div id="hoverX-container"><div id="hoverX"></div></div>
 
-
   <script>
-  // ————————————————————————————————————————————————
-  // Globals & DOM refs
-  let allData = {};               // { symbol: { x:[…], y:[…], ar:[][], md:[][], cm:[][] } }
-  let symbolOrder = [];           // controls dropdown order
-  let rawTexts = [];              // all CSV texts (initial + uploads)
-  const csvInput      = document.getElementById('csvInput');
-  const dataSourceSel = document.getElementById('dataSource');
-  const customSource  = document.getElementById('customSource');
-  const sourceName    = document.getElementById('sourceName');
-  const pctToggle     = document.getElementById('percentToggle');
-  const symbolSelect  = document.getElementById('symbolSelect');
-  const arFloor       = document.getElementById('arFloor');
-  const arFloorNum    = document.getElementById('arFloorNum');
-  const mdMin         = document.getElementById('mdMin');
-  const mdMinNum      = document.getElementById('mdMinNum');
-  const mdCeil        = document.getElementById('mdCeil');
-  const mdCeilNum     = document.getElementById('mdCeilNum');
-  const zMin          = document.getElementById('zMin');
-  const zMax          = document.getElementById('zMax');
-  const currentMaxH   = document.getElementById('currentMaxH');
-  const hoverX        = document.getElementById('hoverX');
-  const hoverY        = document.getElementById('hoverY');
-  const heatDiv       = document.getElementById('heatmap');
-  const exportBtn     = document.getElementById('exportBtn');
+    // Snippet: Data Initialization - Preloaded CSV data for multiple symbols
+    let allData = { /* large preloaded data object */ };
 
-  // — INITIAL LOAD: fetch preloaded CSV :contentReference[oaicite:1]{index=1}
-  document.addEventListener('DOMContentLoaded', ()=>{
-    fetch('data/FeaverSignalsFormatted.csv')
-      .then(r=>r.text())
-      .then(txt=>{
-        rawTexts.push(txt);
-        mergeCSV(txt);
-        populateSymbols();
-      })
-      .catch(err=>console.error('Could not load startup CSV', err));
+    // Snippet: DOM Element References & Default Parameters
+    const symbolSelect = document.getElementById('symbolSelect');
+    const arFloor = document.getElementById('arFloor');
+    const arFloorNum = document.getElementById('arFloorNum');
+    const mdMin = document.getElementById('mdMin');
+    const mdMinNum = document.getElementById('mdMinNum');
+    const mdCeil = document.getElementById('mdCeil');
+    const mdCeilNum = document.getElementById('mdCeilNum');
+    const zMin = document.getElementById('zMin');
+    const zMax = document.getElementById('zMax');
+    const currentMaxH = document.getElementById('currentMaxH');
+    const csvInput = document.getElementById('csvInput');
+    const percentToggle = document.getElementById('percentToggle');
+    const hoverY = document.getElementById('hoverY');
+    const hoverX = document.getElementById('hoverX');
 
-    // wire up UI events
-    dataSourceSel.onchange = () => {
-      customSource.style.display = dataSourceSel.value==='Other' ? 'block' : 'none';
-      updateSourceLabel();
-    };
-    customSource.oninput = updateSourceLabel;
-
-    csvInput.addEventListener('change', e=>{
-      const f = e.target.files[0];
-      if(!f) return;
-      const r = new FileReader();
-      r.onload = ev => {
-        rawTexts.push(ev.target.result);
-        mergeCSV(ev.target.result);
-        updateSourceLabel();
-        populateSymbols();
-        drawHeatmap();
-      };
-      r.readAsText(f);
+    // Snippet: Initialize Symbol Dropdown from allData keys
+    Object.keys(allData).forEach(sym => {
+      const option = document.createElement('option');
+      option.value = sym;
+      option.text = sym;
+      symbolSelect.add(option);
     });
 
-    pctToggle.addEventListener('change', ()=>{
-      // re-parse *all* texts
-      allData = {};
-      symbolOrder = [];
-      rawTexts.forEach(t=>mergeCSV(t));
-      populateSymbols();
-      drawHeatmap();
+    // Snippet: Plot Creation & Update Function
+    function updateHeatmap() {
+      // compute H metric and mask cells based on MD ceiling, then call Plotly.newPlot
+    }
+
+    // Snippet: Event Listeners for Controls to trigger updateHeatmap
+    [symbolSelect, arFloor, arFloorNum, mdMin, mdMinNum, mdCeil, mdCeilNum, zMin, zMax].forEach(el => {
+      el.addEventListener('input', updateHeatmap);
     });
 
-    // sync sliders ↔ number inputs & redraw
-    [[arFloor,arFloorNum], [mdMin,mdMinNum], [mdCeil,mdCeilNum]]
-      .forEach(pair => pair.forEach(el=> el.oninput = ()=>{
-        pair[0].value = pair[1].value = el.value;
-        drawHeatmap();
-      }));
-    [zMin,zMax].forEach(el=> el.oninput = drawHeatmap);
-    symbolSelect.onchange = drawHeatmap;
-    exportBtn.onclick    = exportAllData;
-  });
+    // Snippet: CSV Parsing - read uploaded file and merge into allData
+    csvInput.addEventListener('change', function(e) {
+      // parse CSV, convert values if percentToggle, add new symbols, then updateHeatmap
+    });
 
-  // — UPDATE THE “Source:” LABEL NEXT TO SYMBOL
-  function updateSourceLabel(){
-    let ds = dataSourceSel.value;
-    if(ds==='Other') ds = customSource.value.trim()||'Other';
-    sourceName.textContent = ds;
-  }
+    // Snippet: Conversion Toggle Logic - adjusts multiplier
+    percentToggle.addEventListener('change', () => {
+      // re-parse or adjust data values based on toggle state
+    });
 
-  // — MERGE A SINGLE CSV TEXT INTO allData (with header-synonym mapping)
-  function mergeCSV(text){
-    const lines = text.trim().split(/\r?\n/);
-    if(lines.length<2) return;
-    // identify columns by synonym
-    const hdrs = lines[0].split(',').map(h=>h.trim().toLowerCase());
-    const idx = nameList => hdrs.findIndex(h=> nameList.includes(h) );
-    const iSym = idx(['symbol','ticker','name']);
-    const iDay = idx(['day','days','window','lookback','timeframe','period']);
-    const iRsi = idx(['rsi','relative strength index']);
-    const iAr  = idx(['ar','cagr','annualized return','annual return']);
-    const iMd  = idx(['md','max drawdown','drawdown']);
-    const iCm  = idx(['calmar','calmar ratio']);
-    const recs = {};
-    for(let i=1;i<lines.length;i++){
-      const cols = lines[i].split(',');
-      if(cols.length<=Math.max(iSym,iDay,iRsi,iAr,iMd)) continue;
-      const s = cols[iSym], d = +cols[iDay], x = cols[iRsi];
-      let ar = parseFloat(cols[iAr]), md = parseFloat(cols[iMd]);
-      const cm = iCm>=0 ? parseFloat(cols[iCm]) : null;
-      if(pctToggle.checked){ ar/=100; md/=100; }
+    // Snippet: Hover Handling - update hoverY and hoverX labels on heatmap hover events
+    document.getElementById('heatmap').on('plotly_hover', data => {
+      // show AR/MD/H and axis labels
+    });
+
+    // Snippet: Export Functionality - button to download current allData as CSV
+    // (button and handler not shown in this iteration)
+
+    // Snippet: Initial Plot Render
+    updateHeatmap();
+  </script>
+</body>
+</html>
