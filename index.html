@@ -15,13 +15,13 @@
     input[type=range] { width: 250px; vertical-align: middle; }
     input[type=number] { width: 60px; margin-left: 8px; }
     #currentMaxH { margin-left: 12px; font-weight: bold; }
-    #otherSourceBox { display: none; width: 120px; font-size: 0.95em; }
-    #otherSourceLabel { font-weight: normal; font-size: 0.9em; color: #555; margin-left: 6px; }
+    .switch { position: relative; display: inline-block; width: 40px; height: 20px; margin: 0 6px; vertical-align: middle; }
     #edgeContainer { display: flex; align-items: flex-start; }
     #hoverY { width: 80px; text-align: right; margin-right: 8px; min-height: 60vh; line-height: 60vh; }
     #heatmap { flex: 1; height: 60vh; }
     #hoverX-container { display: flex; justify-content: center; margin-top: 8px; }
     #hoverX { font-style: italic; color: #333; }
+    #otherSourceBox { width: 80px; font-size: 0.9em; margin-left: 6px; }
   </style>
 </head>
 <body>
@@ -53,28 +53,24 @@
     </div>
     <div class="upload-box">
       <div class="control">
-        <label>Upload CSV:</label>
-        <input type="file" id="csvInput" accept=".csv">
-      </div>
-      <div class="control">
         <label>Data Source:</label>
         <select id="dataSourceSelect">
-          <option value="Exxahub">Exxahub</option>
-          <option value="Testfol.io">Testfol.io</option>
-          <option value="Composer">Composer</option>
-          <option value="Quantmage">Quantmage</option>
-          <option value="Other">Other</option>
+          <option>Exxahub</option>
+          <option>Testfol.io</option>
+          <option>Composer</option>
+          <option>Quantmage</option>
+          <option>Other</option>
         </select>
-        <span id="otherSourceLabel">
-          <input type="text" id="otherSourceBox" placeholder="Type source...">
-        </span>
+        <input type="text" id="otherSourceBox" placeholder="Type here" style="display:none;" />
       </div>
+      <div class="control"><label>Upload CSV:</label><input type="file" id="csvInput" accept=".csv"></div>
     </div>
   </div>
   <div id="edgeContainer"><div id="hoverY"></div><div id="heatmap"></div></div>
   <div id="hoverX-container"><div id="hoverX"></div></div>
   <script>
     let allData = {};
+    let rawText = null;
     const csvInput = document.getElementById('csvInput'),
           symbolSelect = document.getElementById('symbolSelect'),
           arFloor = document.getElementById('arFloor'),
@@ -92,18 +88,12 @@
           dataSourceSelect = document.getElementById('dataSourceSelect'),
           otherSourceBox = document.getElementById('otherSourceBox');
 
-    // Show the text box only if "Other" is selected
-    dataSourceSelect.addEventListener('change', function() {
-      if (dataSourceSelect.value === 'Other') {
-        otherSourceBox.style.display = 'inline-block';
-        otherSourceBox.focus();
-      } else {
-        otherSourceBox.style.display = 'none';
-        otherSourceBox.value = '';
-      }
+    // Show or hide the Other input
+    dataSourceSelect.addEventListener('change', () => {
+      otherSourceBox.style.display = dataSourceSelect.value === "Other" ? "" : "none";
     });
 
-    // AUTOLOAD CSV ON PAGE LOAD
+    // AUTOLOAD CSV ON PAGE LOAD (default source = "Exxahub")
     window.addEventListener('DOMContentLoaded', () => {
       fetch('data/LoadDataTQQQ.csv')
         .then(response => {
@@ -111,7 +101,8 @@
           return response.text();
         })
         .then(csvText => {
-          buildFromText(csvText);
+          rawText = csvText;
+          buildFromText(csvText, "Exxahub");
           populateSymbols();
         })
         .catch(error => {
@@ -120,17 +111,14 @@
     });
 
     function populateSymbols() {
-      const prevVal = symbolSelect.value;
       symbolSelect.innerHTML = '';
       Object.keys(allData).forEach(s => {
         const opt = document.createElement('option');
         opt.value = opt.text = s;
         symbolSelect.appendChild(opt);
       });
-      // Restore previous selection if possible
       if (symbolSelect.options.length) {
-        const idx = Array.from(symbolSelect.options).findIndex(o => o.value === prevVal);
-        symbolSelect.selectedIndex = idx >= 0 ? idx : 0;
+        symbolSelect.selectedIndex = 0;
         drawHeatmap();
       }
     }
@@ -138,9 +126,14 @@
     csvInput.addEventListener('change', e => {
       const reader = new FileReader();
       reader.onload = evt => {
-        buildFromText(evt.target.result); // Merge new data!
+        rawText = evt.target.result;
+        // get the chosen source
+        let source = dataSourceSelect.value;
+        if (source === "Other") {
+          source = otherSourceBox.value.trim() || "Other";
+        }
+        buildFromText(rawText, source);
         populateSymbols();
-        // Optional: you can use dataSourceSelect.value and otherSourceBox.value here in future logic
       };
       reader.readAsText(e.target.files[0]);
     });
@@ -160,16 +153,19 @@
     [zMin, zMax].forEach(el => el.oninput = drawHeatmap);
     symbolSelect.onchange = drawHeatmap;
 
-    function buildFromText(text) {
+    // Accepts new param: source
+    function buildFromText(text, source) {
       const lines = text.trim().split(/\r?\n/);
       if (!lines.length) return;
 
+      // Allowed header names (case-insensitive)
       const headerMap = {
         symbol: ['symbol', 'ticker', 'name'],
         day: ['day', 'days', 'timeframe', 'window', 'period', 'lookback'],
         rsi: ['rsi', 'relative strength index'],
         ar: ['ar', 'annualized return', 'cagr'],
         md: ['md', 'max drawdown', 'drawdown']
+        // Calmar will be calculated, not loaded
       };
 
       function findCol(headers, aliases) {
@@ -193,20 +189,23 @@
         colIdx[key] = idx;
       });
 
+      // Store per-symbol per-source
       const temp = {};
 
       for (let i = 1; i < lines.length; ++i) {
         const c = lines[i].split(',');
         if (c.length < headers.length) continue;
-        const s = c[colIdx.symbol];
+        // This is the new combo key
+        const symSource = c[colIdx.symbol] + " (" + source + ")";
         const d = +c[colIdx.day];
         const x = c[colIdx.rsi];
         let ar = parseFloat(c[colIdx.ar]), md = parseFloat(c[colIdx.md]);
         const cm = (md === 0 ? null : ar / md);
-        temp[s] = temp[s] || [];
-        temp[s].push({ day: d, rsi: x, ar, md, cm });
+        temp[symSource] = temp[symSource] || [];
+        temp[symSource].push({ day: d, rsi: x, ar, md, cm });
       }
 
+      // Merge (not replace) into allData
       Object.keys(temp).forEach(s => {
         const arr = temp[s];
         const xs = Array.from(new Set(arr.map(o => o.rsi))).sort();
@@ -276,15 +275,15 @@
         xaxis: { title: 'RSI Threshold' },
         yaxis: { title: 'Lookback (days)' }
       }, { responsive: true });
-
+      // Edge labels on hover
       heatDiv.on('plotly_hover', function(eventData) {
         var pt = eventData.points[0];
-        hoverX.innerText = 'RSI: ' + pt.x;
-        hoverY.innerText = 'Day: ' + pt.y;
+        document.getElementById('hoverX').innerText = 'RSI: ' + pt.x;
+        document.getElementById('hoverY').innerText = 'Day: ' + pt.y;
       });
       heatDiv.on('plotly_unhover', function() {
-        hoverX.innerText = '';
-        hoverY.innerText = '';
+        document.getElementById('hoverX').innerText = '';
+        document.getElementById('hoverY').innerText = '';
       });
     }
   </script>
