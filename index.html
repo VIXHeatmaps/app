@@ -210,27 +210,26 @@
         temp[s].push({ day: d, rsi: x, ar, md, cm });
       }
 
-      // Rebuild allData as before
-      allData = {};
-      Object.keys(temp).forEach(s => {
-        const arr = temp[s];
-        const xs = Array.from(new Set(arr.map(o => o.rsi))).sort();
-        const ys = Array.from(new Set(arr.map(o => o.day))).sort((a, b) => a - b);
-        const arM = ys.map(y => xs.map(x => {
-          const rec = arr.find(o => o.day === y && o.rsi === x);
-          return rec ? rec.ar : null;
-        }));
-        const mdM = ys.map(y => xs.map(x => {
-          const rec = arr.find(o => o.day === y && o.rsi === x);
-          return rec ? rec.md : null;
-        }));
-        const cmM = ys.map(y => xs.map(x => {
-          const rec = arr.find(o => o.day === y && o.rsi === x);
-          return rec ? rec.cm : null;
-        }));
-        allData[s] = { x: xs, y: ys, ar: arM, md: mdM, cm: cmM };
-      });
-    }
+    // Merge new symbols into allData
+Object.keys(temp).forEach(s => {
+  const arr = temp[s];
+  const xs = Array.from(new Set(arr.map(o => o.rsi))).sort();
+  const ys = Array.from(new Set(arr.map(o => o.day))).sort((a, b) => a - b);
+  const arM = ys.map(y => xs.map(x => {
+    const rec = arr.find(o => o.day === y && o.rsi === x);
+    return rec ? rec.ar : null;
+  }));
+  const mdM = ys.map(y => xs.map(x => {
+    const rec = arr.find(o => o.day === y && o.rsi === x);
+    return rec ? rec.md : null;
+  }));
+  const cmM = ys.map(y => xs.map(x => {
+    const rec = arr.find(o => o.day === y && o.rsi === x);
+    return rec ? rec.cm : null;
+  }));
+  allData[s] = { x: xs, y: ys, ar: arM, md: mdM, cm: cmM };  // <--- Just assign/overwrite this symbol
+});
+
 
     function computeH(ar, md, floor, minMD) {
       return ar.map((row, i) => row.map((v, j) => v == null ? null : (v - floor) / Math.max(md[i][j], minMD)));
