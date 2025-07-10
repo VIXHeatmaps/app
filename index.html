@@ -55,24 +55,28 @@
   <div id="edgeContainer"><div id="hoverY"></div><div id="heatmap"></div></div>
   <div id="hoverX-container"><div id="hoverX"></div></div>
   <script>
-    // Data and ordering
+    // Store multiple CSVs and data
+    let rawTexts = [];
     let allData = {};
     let symbolOrder = [];
-    let rawText = null;
 
-    // Element refs
+    // Elements
     const csvInput = document.getElementById('csvInput');
     const pctToggle = document.getElementById('percentToggle');
     const symbolSelect = document.getElementById('symbolSelect');
-    const arFloor = document.getElementById('arFloor'); const arFloorNum = document.getElementById('arFloorNum');
-    const mdMin = document.getElementById('mdMin'); const mdMinNum = document.getElementById('mdMinNum');
-    const mdCeil = document.getElementById('mdCeil'); const mdCeilNum = document.getElementById('mdCeilNum');
-    const zMin = document.getElementById('zMin'); const zMax = document.getElementById('zMax');
-    const hoverX = document.getElementById('hoverX'); const hoverY = document.getElementById('hoverY');
-    const currentMaxH = document.getElementById('currentMaxH'); const heatDiv = document.getElementById('heatmap');
+    const arFloor = document.getElementById('arFloor'), arFloorNum = document.getElementById('arFloorNum');
+    const mdMin = document.getElementById('mdMin'), mdMinNum = document.getElementById('mdMinNum');
+    const mdCeil = document.getElementById('mdCeil'), mdCeilNum = document.getElementById('mdCeilNum');
+    const zMin = document.getElementById('zMin'), zMax = document.getElementById('zMax');
+    const hoverX = document.getElementById('hoverX'), hoverY = document.getElementById('hoverY');
+    const currentMaxH = document.getElementById('currentMaxH'), heatDiv = document.getElementById('heatmap');
 
-    // Init
-    window.addEventListener('DOMContentLoaded', () => { bindControls(); loadDefaultCSV(); });
+    // Initialize
+    window.addEventListener('DOMContentLoaded', () => {
+      bindControls();
+      loadDefaultCSV();
+    });
+
     function bindControls() {
       csvInput.addEventListener('change', handleUpload);
       pctToggle.addEventListener('change', () => recalc(false));
@@ -86,22 +90,27 @@
     function loadDefaultCSV() {
       fetch('data/FeaverSignalsFormatted.csv')
         .then(res => res.text())
-        .then(text => { rawText = text; recalc(true); })
+        .then(text => { rawTexts.push(text); recalc(true); })
         .catch(err => console.error('Auto-load failed:', err));
     }
 
     function handleUpload(e) {
       const reader = new FileReader();
-      reader.onload = evt => { rawText = evt.target.result; recalc(true); };
+      reader.onload = evt => { rawTexts.push(evt.target.result); recalc(true); };
       reader.readAsText(e.target.files[0]);
     }
 
-    function recalc(resetSymbol = false) {
-      if (!rawText) return;
-      const newData = parseText(rawText);
-      mergeData(newData);
-      if (resetSymbol) {
-        updateSymbolOrder(Object.keys(newData));
+    // Recalculate allData and UI
+    function recalc(resetOrder) {
+      allData = {};
+      rawTexts.forEach(txt => {
+        const parsed = parseText(txt);
+        Object.entries(parsed).forEach(([s,d]) => { allData[s] = d; });
+      });
+      if (resetOrder) {
+        // new symbols from last CSV
+        const latestKeys = Object.keys(parseText(rawTexts[rawTexts.length-1]));
+        updateSymbolOrder(latestKeys);
         populateSymbols();
       } else {
         drawHeatmap();
@@ -119,26 +128,22 @@
         tmp[s] = tmp[s] || [];
         tmp[s].push({ day, rsi, ar, md, cm });
       });
-      const parsed = {};
+      const out = {};
       Object.entries(tmp).forEach(([s, arr]) => {
-        const xs = Array.from(new Set(arr.map(o => o.rsi))).sort((a, b) => a - b);
-        const ys = Array.from(new Set(arr.map(o => o.day))).sort((a, b) => a - b);
-        const arM = ys.map(y => xs.map(x => { const r = arr.find(o => o.day === y && o.rsi === x); return r ? r.ar : null; }));
-        const mdM = ys.map(y => xs.map(x => { const r = arr.find(o => o.day === y && o.rsi === x); return r ? r.md : null; }));
-        const cmM = ys.map(y => xs.map(x => { const r = arr.find(o => o.day === y && o.rsi === x); return r ? r.cm : null; }));
-        parsed[s] = { x: xs, y: ys, ar: arM, md: mdM, cm: cmM };
+        const xs = Array.from(new Set(arr.map(o => o.rsi))).sort((a,b)=>a-b);
+        const ys = Array.from(new Set(arr.map(o => o.day))).sort((a,b)=>a-b);
+        const arM = ys.map(y => xs.map(x => { const r=arr.find(o=>o.day===y&&o.rsi===x); return r? r.ar : null; }));
+        const mdM = ys.map(y => xs.map(x => { const r=arr.find(o=>o.day===y&&o.rsi===x); return r? r.md : null; }));
+        const cmM = ys.map(y => xs.map(x => { const r=arr.find(o=>o.day===y&&o.rsi===x); return r? r.cm : null; }));
+        out[s] = { x: xs, y: ys, ar: arM, md: mdM, cm: cmM };
       });
-      return parsed;
+      return out;
     }
 
-    function mergeData(newData) {
-      Object.entries(newData).forEach(([s, d]) => { allData[s] = d; });
-    }
-
-    function updateSymbolOrder(newSymbols) {
-      newSymbols.slice().reverse().forEach(s => {
-        const i = symbolOrder.indexOf(s);
-        if (i !== -1) symbolOrder.splice(i, 1);
+    function updateSymbolOrder(newSyms) {
+      newSyms.slice().reverse().forEach(s => {
+        const idx = symbolOrder.indexOf(s);
+        if (idx !== -1) symbolOrder.splice(idx, 1);
         symbolOrder.unshift(s);
       });
     }
@@ -153,29 +158,26 @@
     }
 
     function computeH(ar, md, floor, minMD) {
-      return ar.map((row, i) =>
-        row.map((v, j) => v == null ? null : (v - floor) / Math.max(md[i][j], minMD))
-      );
+      return ar.map((row,i) => row.map((v,j) => v==null? null : (v-floor)/Math.max(md[i][j],minMD)));
     }
 
     function drawHeatmap() {
       const s = symbolSelect.value;
       if (!s || !allData[s]) return;
       const D = allData[s];
-      const floor = +arFloor.value / 100, minMD = +mdMin.value / 100, ceilMD = +mdCeil.value / 100;
-      const H = computeH(D.ar, D.md, floor, minMD);
-      const mask = D.md.map(r => r.map(v => (v != null && v > ceilMD) ? 1 : 0));
-      let maxH = -Infinity;
-      H.forEach(r => r.forEach(v => { if (v != null && v > maxH) maxH = v; }));
-      currentMaxH.textContent = 'Current Max H: ' + maxH.toFixed(3);
-      Plotly.newPlot(heatDiv, [
-        { z: H, x: D.x, y: D.y, type: 'heatmap', colorscale: [[0,'green'],[0.5,'yellow'],[1,'red']], zmin: +zMin.value, zmax: +zMax.value,
-          customdata: D.ar.map((r,i) => r.map((_,j) => [D.ar[i][j], D.md[i][j], D.cm[i][j], H[i][j]])),
-          hovertemplate: 'AR: %{customdata[0]:.2%}<br>MD: %{customdata[1]:.2%}<br>Calmar: %{customdata[2]:.2f}<br>H: %{customdata[3]:.3f}<extra></extra>' },
-        { z: mask, x: D.x, y: D.y, type: 'heatmap', showscale: false, colorscale: [[0,'rgba(0,0,0,0)'],[1,'rgba(0,0,0,0.5)']], hoverinfo: 'skip' }
-      ], { margin:{l:60,r:60,t:60,b:60}, xaxis:{title:'RSI'}, yaxis:{title:'Lookback (days')} }, {responsive:true});
-      heatDiv.on('plotly_hover', ev => { const pt = ev.points[0]; hoverX.innerText = 'RSI: ' + pt.x; hoverY.innerText = 'Day: ' + pt.y; });
-      heatDiv.on('plotly_unhover', () => { hoverX.innerText = ''; hoverY.innerText = ''; });
+      const floor = +arFloor.value/100, minMD = +mdMin.value/100, ceilMD = +mdCeil.value/100;
+      const H = computeH(D.ar,D.md,floor,minMD);
+      const mask = D.md.map(r=>r.map(v=>(v!=null&&v>ceilMD)?1:0));
+      let maxH=-Infinity; H.forEach(r=>r.forEach(v=>{if(v!=null&&v>maxH)maxH=v;}));
+      currentMaxH.textContent='Current Max H: '+maxH.toFixed(3);
+      Plotly.newPlot(heatDiv,[
+        { z:H,x:D.x,y:D.y,type:'heatmap',colorscale:[[0,'green'],[0.5,'yellow'],[1,'red']],zmin:+zMin.value,zmax:+zMax.value,
+          customdata:D.ar.map((r,i)=>r.map((_,j)=>[D.ar[i][j],D.md[i][j],D.cm[i][j],H[i][j]])),
+          hovertemplate:'AR: %{customdata[0]:.2%}<br>MD: %{customdata[1]:.2%}<br>Calmar: %{customdata[2]:.2f}<br>H: %{customdata[3]:.3f}<extra></extra>'},
+        { z:mask,x:D.x,y:D.y,type:'heatmap',showscale:false,colorscale:[[0,'rgba(0,0,0,0)'],[1,'rgba(0,0,0,0.5)']],hoverinfo:'skip'}
+      ],{margin:{l:60,r:60,t:60,b:60},xaxis:{title:'RSI'},yaxis:{title:'Lookback (days')}},{responsive:true});
+      heatDiv.on('plotly_hover',ev=>{const pt=ev.points[0];hoverX.innerText='RSI: '+pt.x;hoverY.innerText='Day: '+pt.y;});
+      heatDiv.on('plotly_unhover',()=>{hoverX.innerText='';hoverY.innerText='';});
     }
   </script>
 </body>
