@@ -15,13 +15,6 @@
     input[type=range] { width: 250px; vertical-align: middle; }
     input[type=number] { width: 60px; margin-left: 8px; }
     #currentMaxH { margin-left: 12px; font-weight: bold; }
-    .switch { position: relative; display: inline-block; width: 40px; height: 20px; margin: 0 6px; vertical-align: middle; }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #ccc; transition: .4s; border-radius: 20px; }
-    .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background: white; transition: .4s; border-radius: 50%; }
-    input:checked + .slider { background: #4CAF50; }
-    input:checked + .slider:before { transform: translateX(20px); }
-    .format-label { vertical-align: middle; }
     #edgeContainer { display: flex; align-items: flex-start; }
     #hoverY { width: 80px; text-align: right; margin-right: 8px; min-height: 60vh; line-height: 60vh; }
     #heatmap { flex: 1; height: 60vh; }
@@ -58,15 +51,6 @@
     </div>
     <div class="upload-box">
       <div class="control"><label>Upload CSV:</label><input type="file" id="csvInput" accept=".csv"></div>
-      <div class="toggle-box">
-        <label>Data Conversion:</label>
-        <span class="format-label">×0.01</span>
-        <label class="switch">
-          <input type="checkbox" id="percentToggle" checked>
-          <span class="slider"></span>
-        </label>
-        <span class="format-label">×100</span>
-      </div>
     </div>
   </div>
   <div id="edgeContainer"><div id="hoverY"></div><div id="heatmap"></div></div>
@@ -75,7 +59,6 @@
     let allData = {};
     let rawText = null;
     const csvInput = document.getElementById('csvInput'),
-          pctToggle = document.getElementById('percentToggle'),
           symbolSelect = document.getElementById('symbolSelect'),
           arFloor = document.getElementById('arFloor'),
           arFloorNum = document.getElementById('arFloorNum'),
@@ -120,24 +103,13 @@
       }
     }
 
-    // (Optionally remove or comment this line, since it's now handled above)
-    // window.addEventListener('load', populateSymbols);
-
     csvInput.addEventListener('change', e => {
       const reader = new FileReader();
       reader.onload = evt => {
-        rawText = evt.target.result;
-        buildFromText(rawText);
+        buildFromText(evt.target.result); // No longer updating rawText, just merge
         populateSymbols();
       };
       reader.readAsText(e.target.files[0]);
-    });
-
-    pctToggle.addEventListener('change', () => {
-      if (rawText) {
-        buildFromText(rawText);
-        drawHeatmap();
-      }
     });
 
     [arFloor, arFloorNum].forEach(el => el.oninput = () => {
@@ -203,34 +175,31 @@
         const d = +c[colIdx.day];
         const x = c[colIdx.rsi];
         let ar = parseFloat(c[colIdx.ar]), md = parseFloat(c[colIdx.md]);
-        // Apply % toggle if enabled
-        if (pctToggle.checked) { ar /= 100; md /= 100; }
         const cm = (md === 0 ? null : ar / md); // Calmar calculation
         temp[s] = temp[s] || [];
         temp[s].push({ day: d, rsi: x, ar, md, cm });
       }
 
-    // Merge new symbols into allData
-Object.keys(temp).forEach(s => {
-  const arr = temp[s];
-  const xs = Array.from(new Set(arr.map(o => o.rsi))).sort();
-  const ys = Array.from(new Set(arr.map(o => o.day))).sort((a, b) => a - b);
-  const arM = ys.map(y => xs.map(x => {
-    const rec = arr.find(o => o.day === y && o.rsi === x);
-    return rec ? rec.ar : null;
-  }));
-  const mdM = ys.map(y => xs.map(x => {
-    const rec = arr.find(o => o.day === y && o.rsi === x);
-    return rec ? rec.md : null;
-  }));
-  const cmM = ys.map(y => xs.map(x => {
-    const rec = arr.find(o => o.day === y && o.rsi === x);
-    return rec ? rec.cm : null;
-  }));
-  allData[s] = { x: xs, y: ys, ar: arM, md: mdM, cm: cmM };  // <--- Just assign/overwrite this symbol
-});
+      // Merge new symbols into allData
+      Object.keys(temp).forEach(s => {
+        const arr = temp[s];
+        const xs = Array.from(new Set(arr.map(o => o.rsi))).sort();
+        const ys = Array.from(new Set(arr.map(o => o.day))).sort((a, b) => a - b);
+        const arM = ys.map(y => xs.map(x => {
+          const rec = arr.find(o => o.day === y && o.rsi === x);
+          return rec ? rec.ar : null;
+        }));
+        const mdM = ys.map(y => xs.map(x => {
+          const rec = arr.find(o => o.day === y && o.rsi === x);
+          return rec ? rec.md : null;
+        }));
+        const cmM = ys.map(y => xs.map(x => {
+          const rec = arr.find(o => o.day === y && o.rsi === x);
+          return rec ? rec.cm : null;
+        }));
+        allData[s] = { x: xs, y: ys, ar: arM, md: mdM, cm: cmM };
+      });
     }
-
 
     function computeH(ar, md, floor, minMD) {
       return ar.map((row, i) => row.map((v, j) => v == null ? null : (v - floor) / Math.max(md[i][j], minMD)));
