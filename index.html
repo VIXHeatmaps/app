@@ -5,112 +5,99 @@
   <title>Heatmap Viewer</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
-    body { font-family: sans-serif; margin: 20px; }
-    .formula { font-style: italic; margin-bottom: 20px; font-size: 1.4em; }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; }
+    body { font-family: sans-serif; margin: 14px; }
+    .formula { font-style: italic; font-size: 1.05em; margin-bottom: 8px; font-weight: normal; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0; }
     .controls { flex: 1; }
-    .upload-box { border: 1px solid #ccc; padding: 12px 16px 18px 16px; border-radius: 10px; min-width: 420px; position: relative; }
-    .control { margin-bottom: 12px; }
+    .right-controls {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      margin-left: 32px;
+      margin-top: 0;
+      background: none !important;
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0;
+    }
+    .right-row { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; }
+    .right-label { font-weight: bold; }
+    .readme-link {
+      color: #1a7af6;
+      font-weight: bold;
+      cursor: pointer;
+      text-decoration: underline;
+      margin-left: 2px;
+      font-size: 1em;
+    }
+    /* Minimal control style */
+    .control { margin-bottom: 6px; }
     label { font-weight: bold; margin-right: 8px; }
-    input[type=range] { width: 250px; vertical-align: middle; }
-    input[type=number] { width: 60px; margin-left: 8px; }
+    input[type=range] { width: 200px; vertical-align: middle; }
+    input[type=number], select { width: 54px; margin-left: 5px; }
     #currentMaxH { margin-left: 12px; font-weight: bold; }
     #edgeContainer { display: flex; align-items: flex-start; }
     #hoverY { width: 80px; text-align: right; margin-right: 8px; min-height: 60vh; line-height: 60vh; }
     #heatmap { flex: 1; height: 60vh; }
     #hoverX-container { display: flex; justify-content: center; margin-top: 8px; }
     #hoverX { font-style: italic; color: #333; }
-    #otherSourceBox { width: 80px; font-size: 0.9em; margin-left: 6px; }
-    #clearDataBtn { margin-left: 12px; padding: 2px 12px; border-radius: 6px; border: 1px solid #aaa; background: #fafafa; cursor: pointer; }
-    #clearDataBtn:hover { background: #eee; }
-    /* Button styling - minimal style for upload/download */
+
+    /* Minimal file input, button blue style */
     .file-btn {
       display: inline-block;
-      padding: 5px 18px;
-      font-size: 1em;
+      padding: 4px 20px;
+      font-size: 0.92em;
       font-family: inherit;
-      color: #222;
-      background: #fafafa;
-      border: 1px solid #aaa;
-      border-radius: 6px;
-      box-sizing: border-box;
+      color: #fff;
+      background: #1a7af6;
+      border: none;
+      border-radius: 5px;
       cursor: pointer;
-      margin-left: 0;
-      margin-right: 14px;
-      margin-top: 2px;
-      margin-bottom: 0;
       transition: background 0.1s;
-      font-weight: normal;
+      margin-left: 10px;
     }
     .file-btn:hover, .file-btn:focus {
-      background: #e5e5e5;
-      border-color: #888;
+      background: #155db2;
     }
-    .readme-link {
-      color: #008000;
+    /* Remove outline from right section (no border) */
+    .no-border {
+      border: none !important;
+      background: none !important;
+      box-shadow: none !important;
+    }
+    /* Inline labels for upload/export */
+    .inline-label {
+      font-weight: bold;
+      margin-right: 5px;
       font-size: 1em;
-      font-weight: 600;
-      cursor: pointer;
+    }
+    .csv-link {
+      color: #1a7af6;
       text-decoration: underline;
-      margin-left: 12px;
-      background: none;
+      font-weight: bold;
+      font-size: 1em;
+      cursor: pointer;
       border: none;
+      background: none;
+      margin: 0 2px;
       padding: 0;
     }
-    .readme-link:hover { text-decoration: underline; color: #005700; }
-    /* Modal styles */
-    .modal-bg {
-      display: none;
-      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(0,0,0,0.18);
-      z-index: 10;
+    @media (max-width: 900px) {
+      .header { flex-direction: column; }
+      .right-controls { align-items: flex-start; margin-left: 0; }
     }
-    .modal {
-      background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 2px 16px rgba(0,0,0,0.18);
-      position: fixed;
-      top: 12vh; left: 50%; transform: translateX(-50%);
-      min-width: 370px; max-width: 95vw; padding: 32px 26px 22px 26px;
-      z-index: 12;
-    }
-    .modal-title { font-weight: 700; margin-bottom: 12px; font-size: 1.25em; }
-    .modal-close {
-      position: absolute; top: 10px; right: 14px;
-      font-size: 1.2em; color: #888; background: none; border: none; cursor: pointer;
-    }
-    .csv-table {
-      border-collapse: collapse; width: 100%; background: white; border: 1px solid #e1e4e8; margin: 0 0 10px 0;
-    }
-    .csv-table th, .csv-table td {
-      border: 1px solid #e1e4e8; padding: 5px 14px; text-align: center;
-    }
-    .csv-table th { font-weight: 600; background: #f6f8fa; }
-    .csv-success {
-      color: #008000;
-      font-size: 0.98em;
-      margin-top: 2px;
-    }
-    /* Make file inputs + buttons line up horizontally */
-    .button-row {
-      display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
-      margin-top: 10px;
-    }
-    /* Tweak top margin for less wasted space */
-    .header { margin-top: 0; }
-    .upload-box { margin-top: 0 !important; }
   </style>
 </head>
 <body>
-  <div class="formula">
-    <strong>Metric:</strong> <em>H = (AR − AR<sub>min</sub>) / max(MD, MD<sub>min</sub>)</em> (decimal)
+  <div class="formula" style="margin-top:0;">
+    <span style="font-style: italic;">Metric: <span style="font-style:normal;">H = (AR – AR<sub>min</sub>) / max(MD, MD<sub>min</sub>) (decimal)</span></span>
   </div>
   <div class="header">
     <div class="controls">
       <div class="control" style="display: flex; align-items: center;">
         <label>Symbol:</label>
         <select id="symbolSelect"></select>
-        <button id="clearDataBtn">Clear Data</button>
+        <button id="clearDataBtn" style="margin-left:8px;">Clear Data</button>
       </div>
       <div class="control"><label>AR Min. (%):</label>
         <input type="range" id="arFloor" min="0" max="100" step="0.1" value="3">
@@ -124,16 +111,17 @@
         <input type="range" id="mdCeil" min="0" max="100" step="0.1" value="50">
         <input type="number" id="mdCeilNum" min="0" max="100" step="0.1" value="50">
       </div>
-      <div class="control"><label>Colorbar Min H:</label>
+      <div class="control">
+        <label>Colorbar Min H:</label>
         <input type="number" id="zMin" step="0.01" value="-1">
         <label>Colorbar Max H:</label>
         <input type="number" id="zMax" step="0.01" value="1">
         <span id="currentMaxH">Current Max H: --</span>
       </div>
     </div>
-    <div class="upload-box">
-      <div style="display:flex; align-items:center; margin-bottom:6px;">
-        <label style="font-weight:bold; margin-right:8px;">Data Source:</label>
+    <div class="right-controls no-border">
+      <div class="right-row">
+        <span class="right-label">Data Source:</span>
         <select id="dataSourceSelect">
           <option>Exxahub</option>
           <option>Testfol.io</option>
@@ -141,46 +129,62 @@
           <option>Quantmage</option>
           <option>Other</option>
         </select>
-        <input type="text" id="otherSourceBox" placeholder="Type here" style="display:none; margin-left:6px;" />
-        <label style="font-weight:bold; margin-left:18px;"><input type="checkbox" id="decimalToPercentBox" style="vertical-align:middle;"> Decimal → %</label>
-        <span style="color: #008000; font-size: 1em; margin-left:8px;">(select prior to upload)</span>
-        <button class="readme-link" id="readmeLink" type="button">Read Me</button>
+        <input type="checkbox" id="decimalToPercentBox" style="margin-left:8px;">
+        <span style="font-weight:bold;">Decimal → %</span>
+        <span style="color: #129400; font-size:1em; margin-left:2px;">(select prior to upload)</span>
       </div>
-      <div class="button-row">
-        <span class="upload-label" style="font-weight:bold;">Upload CSV:</span>
-        <input type="file" id="csvInput" accept=".csv" style="margin-right:18px;">
-        <button id="exportCSVBtn" class="file-btn">Download Data</button>
+      <div class="right-row">
+        <span class="inline-label">Upload CSV:</span>
+        <input type="file" id="csvInput" accept=".csv">
+        <button id="exportCSVBtn" class="file-btn">
+          Export <a href="#" id="csvTemplateLink" class="csv-link" tabindex="-1">CSV</a>
+        </button>
       </div>
+      <input type="text" id="otherSourceBox" placeholder="Type here" style="display:none; margin-top:5px; width: 100px;" />
     </div>
   </div>
   <div id="edgeContainer"><div id="hoverY"></div><div id="heatmap"></div></div>
   <div id="hoverX-container"><div id="hoverX"></div></div>
 
-  <!-- Modal for Read Me -->
-  <div id="modalBg" class="modal-bg"></div>
-  <div id="modal" class="modal" style="display:none;">
-    <button class="modal-close" id="modalClose" aria-label="Close">&times;</button>
-    <div class="modal-title">CSV Upload Format</div>
-    <table class="csv-table">
-      <tr>
-        <th>Symbol</th>
-        <th>Days</th>
-        <th>RSI</th>
-        <th>AR</th>
-        <th>MD</th>
-      </tr>
-      <tr>
-        <td>TQQQ</td>
-        <td>9</td>
-        <td>82</td>
-        <td>13.59%</td>
-        <td>9.63%</td>
-      </tr>
-    </table>
-    <div class="csv-success">&#10003; Use these exact headers (<b>column order doesn't matter</b>)</div>
-    <!-- You can add more notes or instructions here -->
+  <!-- CSV Template Modal (hidden by default, pure HTML, appears on CSV link click) -->
+  <div id="csvModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.14); z-index:50;">
+    <div style="background:white; border-radius:7px; max-width:420px; margin:80px auto; padding:26px 32px 20px 32px; box-shadow:0 2px 24px rgba(60,60,60,.10);">
+      <div style="font-weight: bold; font-size:1.12em; margin-bottom: 8px;">CSV Template Required:</div>
+      <table style="border-collapse: collapse; width: 100%; background: white; border: 1px solid #e1e4e8;">
+        <tr>
+          <th style="border: 1px solid #e1e4e8; padding: 5px 14px; background: #f6f8fa;">Symbol</th>
+          <th style="border: 1px solid #e1e4e8; padding: 5px 14px; background: #f6f8fa;">Days</th>
+          <th style="border: 1px solid #e1e4e8; padding: 5px 14px; background: #f6f8fa;">RSI</th>
+          <th style="border: 1px solid #e1e4e8; padding: 5px 14px; background: #f6f8fa;">AR</th>
+          <th style="border: 1px solid #e1e4e8; padding: 5px 14px; background: #f6f8fa;">MD</th>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #e1e4e8; padding: 5px 14px;">TQQQ</td>
+          <td style="border: 1px solid #e1e4e8; padding: 5px 14px;">9</td>
+          <td style="border: 1px solid #e1e4e8; padding: 5px 14px;">82</td>
+          <td style="border: 1px solid #e1e4e8; padding: 5px 14px;">13.59%</td>
+          <td style="border: 1px solid #e1e4e8; padding: 5px 14px;">9.63%</td>
+        </tr>
+      </table>
+      <div style="color: #129400; font-size: 1em; margin-top: 8px;">
+        ✓ Use these exact headers (<b>column order doesn't matter</b>)
+      </div>
+      <button onclick="document.getElementById('csvModal').style.display='none';"
+        style="margin-top:18px; padding:4px 18px; border-radius:5px; background:#1a7af6; color:white; border:none; font-size:0.96em; cursor:pointer;">
+        Close
+      </button>
+    </div>
   </div>
+
   <script>
+    // Modal open/close
+    document.addEventListener("DOMContentLoaded", function() {
+      document.getElementById('csvTemplateLink').onclick = function(e){
+        e.preventDefault();
+        document.getElementById('csvModal').style.display = 'block';
+      };
+    });
+
     let allData = {};
     let rawText = null;
     const csvInput = document.getElementById('csvInput'),
@@ -201,25 +205,7 @@
           otherSourceBox = document.getElementById('otherSourceBox'),
           clearDataBtn = document.getElementById('clearDataBtn'),
           decimalToPercentBox = document.getElementById('decimalToPercentBox'),
-          exportCSVBtn = document.getElementById('exportCSVBtn'),
-          readmeLink = document.getElementById('readmeLink'),
-          modalBg = document.getElementById('modalBg'),
-          modal = document.getElementById('modal'),
-          modalClose = document.getElementById('modalClose');
-
-    // Read Me modal logic
-    readmeLink.onclick = () => {
-      modalBg.style.display = "block";
-      modal.style.display = "block";
-    };
-    modalClose.onclick = () => {
-      modalBg.style.display = "none";
-      modal.style.display = "none";
-    };
-    modalBg.onclick = () => {
-      modalBg.style.display = "none";
-      modal.style.display = "none";
-    };
+          exportCSVBtn = document.getElementById('exportCSVBtn');
 
     // Show/hide "Other" input
     dataSourceSelect.addEventListener('change', () => {
@@ -446,8 +432,9 @@
     }
 
     // ---- CSV Export Functionality ----
-    exportCSVBtn.addEventListener('click', function() {
-      // Get slider values
+    exportCSVBtn.addEventListener('click', function(e) {
+      // Only export on actual button, not CSV link
+      if (e.target.classList.contains('csv-link')) return;
       const floor = +arFloor.value;
       const minMD = +mdMin.value;
       const ceilMD = +mdCeil.value;
