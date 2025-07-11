@@ -23,8 +23,8 @@
     #otherSourceBox { width: 80px; font-size: 0.9em; margin-left: 6px; }
     #clearDataBtn { margin-left: 12px; padding: 2px 12px; border-radius: 6px; border: 1px solid #aaa; background: #fafafa; cursor: pointer; }
     #clearDataBtn:hover { background: #eee; }
-    #exportCsvBtn { margin-top: 4px; padding: 2px 12px; border-radius: 6px; border: 1px solid #aaa; background: #fafafa; cursor: pointer; }
-    #exportCsvBtn:hover { background: #eee; }
+    #exportCSVBtn { margin-top: 10px; padding: 2px 12px; border-radius: 6px; border: 1px solid #aaa; background: #fafafa; cursor: pointer; }
+    #exportCSVBtn:hover { background: #eee; }
   </style>
 </head>
 <body>
@@ -75,7 +75,7 @@
         <span style="font-size:0.9em; color:#555;">(select prior to upload)</span>
       </div>
       <div class="control"><label>Upload CSV:</label><input type="file" id="csvInput" accept=".csv"></div>
-      <div class="control"><button id="exportCsvBtn">Export CSV</button></div>
+      <button id="exportCSVBtn">Export CSV</button>
     </div>
   </div>
   <div id="edgeContainer"><div id="hoverY"></div><div id="heatmap"></div></div>
@@ -101,14 +101,14 @@
           otherSourceBox = document.getElementById('otherSourceBox'),
           clearDataBtn = document.getElementById('clearDataBtn'),
           decimalToPercentBox = document.getElementById('decimalToPercentBox'),
-          exportCsvBtn = document.getElementById('exportCsvBtn');
+          exportCSVBtn = document.getElementById('exportCSVBtn');
 
-    // Show or hide the Other input
+    // Show/hide "Other" input
     dataSourceSelect.addEventListener('change', () => {
       otherSourceBox.style.display = dataSourceSelect.value === "Other" ? "" : "none";
     });
 
-    // CLEAR DATA BUTTON LOGIC
+    // CLEAR DATA BUTTON
     clearDataBtn.addEventListener('click', () => {
       allData = {};
       symbolSelect.innerHTML = '';
@@ -182,7 +182,6 @@
       const lines = text.trim().split(/\r?\n/);
       if (!lines.length) return;
 
-      // Allowed header names (case-insensitive)
       const headerMap = {
         symbol: ['symbol', 'ticker', 'name'],
         day: ['day', 'days', 'timeframe', 'window', 'period', 'lookback'],
@@ -222,7 +221,7 @@
         const d = +c[colIdx.day];
         const x = c[colIdx.rsi];
         let ar = parseFloat(c[colIdx.ar]), md = parseFloat(c[colIdx.md]);
-        // NEW: Convert decimals to percent if checked
+        // Convert decimals to percent if checked
         if (decimalToPercentBox && decimalToPercentBox.checked) {
           ar *= 100;
           md *= 100;
@@ -232,7 +231,7 @@
         temp[symSource].push({ day: d, rsi: x, ar, md, cm });
       }
 
-      // Merge (not replace) into allData
+      // Merge into allData
       Object.keys(temp).forEach(s => {
         const arr = temp[s];
         const xs = Array.from(new Set(arr.map(o => o.rsi))).sort();
@@ -253,17 +252,21 @@
       });
     }
 
+    // All slider logic now uses raw percent units
     function computeH(ar, md, floor, minMD) {
-      return ar.map((row, i) => row.map((v, j) => v == null ? null : (v - floor) / Math.max(md[i][j], minMD)));
+      return ar.map((row, i) => row.map((v, j) => {
+        if (v == null) return null;
+        return (v - floor) / Math.max(md[i][j], minMD);
+      }));
     }
 
     function drawHeatmap() {
       const s = symbolSelect.value;
       if (!s) return;
       const D = allData[s];
-      const floor = +arFloor.value / 100;
-      const minMD = +mdMin.value / 100;
-      const ceilMD = +mdCeil.value / 100;
+      const floor = +arFloor.value;
+      const minMD = +mdMin.value;
+      const ceilMD = +mdCeil.value;
       const zminVal = +zMin.value;
       const zmaxVal = +zMax.value;
       const H = computeH(D.ar, D.md, floor, minMD);
@@ -314,40 +317,45 @@
       });
     }
 
-    // EXPORT CSV FUNCTION
-    exportCsvBtn.addEventListener('click', function () {
-      const Rmin = arFloor.value;
-      const Dmin = mdMin.value;
-      const Dmax = mdCeil.value;
-      let csv = `Symbol,Days,RSI,AR,MD,Calmar,H (Rmin${Rmin}|Dmin${Dmin}|Dmax${Dmax})\n`;
-      Object.entries(allData).forEach(([symbol, D]) => {
+    // ---- CSV Export Functionality ----
+    exportCSVBtn.addEventListener('click', function() {
+      // Get slider values
+      const floor = +arFloor.value;
+      const minMD = +mdMin.value;
+      const ceilMD = +mdCeil.value;
+      const hColName = `H (Rmin${floor}|Dmin${minMD}|Dmax${ceilMD})`;
+
+      // CSV Header
+      let csv = `Symbol,Days,RSI,AR,MD,Calmar,${hColName}\n`;
+      Object.keys(allData).forEach(symbol => {
+        const D = allData[symbol];
+        const H = computeH(D.ar, D.md, floor, minMD);
         for (let i = 0; i < D.y.length; ++i) {
           for (let j = 0; j < D.x.length; ++j) {
-            const ar = D.ar[i][j];
-            const md = D.md[i][j];
-            const cm = D.cm[i][j];
-            if (ar == null || md == null) continue;
-            // Compute H using current slider values
-            const H = ((ar - (+Rmin) / 100) / Math.max(md, (+Dmin) / 100));
+            if (D.ar[i][j] == null) continue;
             csv += [
-              `"${symbol.replace(/"/g, '""')}"`,
+              `"${symbol}"`,
               D.y[i],
               D.x[j],
-              ar,
-              md,
-              cm,
-              H
-            ].join(',') + "\n";
+              D.ar[i][j],
+              D.md[i][j],
+              (D.cm[i][j] == null ? "" : D.cm[i][j]),
+              (H[i][j] == null ? "" : H[i][j].toFixed(5))
+            ].join(",") + "\n";
           }
         }
       });
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'heatmap_export.csv';
+      // Download
+      const blob = new Blob([csv], {type: "text/csv"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "merged_heatmap_data.csv";
+      document.body.appendChild(a);
       a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+      }, 0);
     });
   </script>
 </body>
