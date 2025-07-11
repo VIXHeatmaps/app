@@ -363,16 +363,17 @@
         // --- Symbol (Source) above heatmap ---
         section.innerHTML = `<div class="heatmap-title" style="margin-bottom: 4px;">${symbol}</div>
         <div style="position:relative;">
-          <div id="heatmap-${plotIdx}" style="height: 56vh;"></div>
-          <div class="colorbar-input-container" style="top: 18px;" id="colorbar-min-container-${plotIdx}">
-            <span class="colorbar-label">Min H</span>
-            <input type="number" step="0.01" value="${zminVal}" id="colorbar-min-${plotIdx}" class="colorbar-input">
-          </div>
-          <div class="colorbar-input-container" style="bottom: 16px; top:unset;" id="colorbar-max-container-${plotIdx}">
-            <span class="colorbar-label">Max H</span>
-            <input type="number" step="0.01" value="${zmaxVal}" id="colorbar-max-${plotIdx}" class="colorbar-input">
-          </div>
-        </div>
+  <div id="heatmap-${plotIdx}" style="height: 56vh;"></div>
+  <div class="colorbar-input-container" style="top: 18px;" id="colorbar-max-container-${plotIdx}">
+    <span class="colorbar-label">Max H</span>
+    <input type="number" step="0.01" value="${zmaxVal}" id="colorbar-max-${plotIdx}" class="colorbar-input">
+  </div>
+  <div class="colorbar-input-container" style="bottom: 16px; top:unset;" id="colorbar-min-container-${plotIdx}">
+    <span class="colorbar-label">Min H</span>
+    <input type="number" step="0.01" value="${zminVal}" id="colorbar-min-${plotIdx}" class="colorbar-input">
+  </div>
+</div>
+
         <div style="display: flex; justify-content: space-between; font-size: 0.97em; margin-top:2px;">
           <span id="hoverX-${plotIdx}"></span>
           <span id="hoverY-${plotIdx}"></span>
