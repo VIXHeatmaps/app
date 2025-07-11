@@ -114,6 +114,71 @@
       font-weight: bold;
       margin-left:12px;
     }
+
+    /* --- Custom Multi-Select Styles --- */
+    .symbol-multiselect {
+      position: relative;
+      width: 270px;
+      max-width: 100%;
+      margin-bottom: 8px;
+      z-index: 11;
+      display: inline-block;
+    }
+    .symbol-multiselect .selected-label {
+      border: 1px solid #bbb;
+      border-radius: 6px;
+      padding: 5px 8px;
+      min-height: 30px;
+      cursor: pointer;
+      font-size: 1em;
+      background: #fafbfc;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+      transition: border-color 0.12s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .symbol-multiselect .selected-label:after {
+      content: "▼";
+      float: right;
+      font-size: 0.8em;
+      color: #888;
+      margin-left: 8px;
+    }
+    .symbol-multiselect.open .selected-label {
+      border-color: #1884f7;
+      background: #f5faff;
+    }
+    .symbol-multiselect-list {
+      position: absolute;
+      top: 110%;
+      left: 0;
+      right: 0;
+      max-height: 230px;
+      min-width: 180px;
+      background: #fff;
+      border: 1px solid #1884f7;
+      border-radius: 8px;
+      box-shadow: 0 3px 18px rgba(0,0,0,0.08);
+      padding: 7px 0 7px 0;
+      overflow-y: auto;
+      z-index: 99;
+      font-size: 1em;
+    }
+    .symbol-multiselect-list label {
+      display: flex;
+      align-items: center;
+      padding: 3px 14px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.08s;
+    }
+    .symbol-multiselect-list label:hover {
+      background: #f2f6ff;
+    }
+    .symbol-multiselect-list input[type=checkbox] {
+      margin-right: 8px;
+    }
   </style>
 </head>
 <body>
@@ -124,7 +189,11 @@
       </div>
       <div style="font-weight:bold; margin-bottom:6px;">
         Symbol:
-        <select id="symbolSelect" multiple size="4" style="min-width:120px;"></select>
+        <!-- Custom Collapsing Multi-Select -->
+        <div class="symbol-multiselect" id="symbolMultiSelectBox">
+          <div class="selected-label" tabindex="0" id="symbolMultiSelectLabel">Select Symbol</div>
+          <div class="symbol-multiselect-list" id="symbolMultiSelectList" style="display:none;"></div>
+        </div>
         <button id="clearDataBtn" style="margin-left:10px; font-size:0.98em;">Clear Data</button>
       </div>
       <div><b>AR Min. (%):</b>
@@ -218,8 +287,10 @@
 
     let allData = {};
     let rawText = null;
+    let selectedSymbols = [];
+    let allSymbolList = [];
+
     const csvInput = document.getElementById('csvInput'),
-          symbolSelect = document.getElementById('symbolSelect'),
           arFloor = document.getElementById('arFloor'),
           arFloorNum = document.getElementById('arFloorNum'),
           mdMin = document.getElementById('mdMin'),
@@ -235,10 +306,92 @@
           exportCSVBtn = document.getElementById('exportCSVBtn'),
           heatmapsContainer = document.getElementById('heatmapsContainer');
 
+    // Custom multi-select elements
+    const symbolMultiSelectBox = document.getElementById('symbolMultiSelectBox');
+    const symbolMultiSelectLabel = document.getElementById('symbolMultiSelectLabel');
+    const symbolMultiSelectList = document.getElementById('symbolMultiSelectList');
+
+    // Populate symbols for multi-select
+    function populateSymbols() {
+      allSymbolList = Object.keys(allData);
+      selectedSymbols = [];
+      symbolMultiSelectList.innerHTML = '';
+      allSymbolList.forEach((sym, idx) => {
+        const id = `multisym-${idx}`;
+        const label = document.createElement('label');
+        label.innerHTML = `<input type="checkbox" id="${id}" value="${sym}"> ${sym}`;
+        symbolMultiSelectList.appendChild(label);
+      });
+      // Auto-select first symbol and update UI
+      if (allSymbolList.length) {
+        selectedSymbols = [allSymbolList[0]];
+        symbolMultiSelectList.querySelector('input').checked = true;
+        updateSymbolLabel();
+        drawHeatmaps();
+      } else {
+        updateSymbolLabel();
+        drawHeatmaps();
+      }
+    }
+
+    // Open/collapse handlers
+    function openSymbolList() {
+      symbolMultiSelectList.style.display = 'block';
+      symbolMultiSelectBox.classList.add('open');
+      symbolMultiSelectLabel.focus();
+    }
+    function closeSymbolList() {
+      symbolMultiSelectList.style.display = 'none';
+      symbolMultiSelectBox.classList.remove('open');
+    }
+    symbolMultiSelectLabel.onclick = (e) => {
+      if (symbolMultiSelectList.style.display === 'block') {
+        closeSymbolList();
+      } else {
+        openSymbolList();
+      }
+    };
+    symbolMultiSelectLabel.onkeydown = (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openSymbolList();
+      }
+    };
+    symbolMultiSelectList.onclick = (e) => {
+      if (e.target.tagName === "INPUT") {
+        const sym = e.target.value;
+        if (e.target.checked) {
+          if (!selectedSymbols.includes(sym)) selectedSymbols.push(sym);
+        } else {
+          selectedSymbols = selectedSymbols.filter(s => s !== sym);
+        }
+        updateSymbolLabel();
+        drawHeatmaps();
+      }
+    };
+    document.addEventListener('mousedown', (e) => {
+      if (!symbolMultiSelectBox.contains(e.target)) {
+        closeSymbolList();
+      }
+    });
+
+    function updateSymbolLabel() {
+      if (selectedSymbols.length === 0) {
+        symbolMultiSelectLabel.innerText = "Select Symbol";
+      } else if (selectedSymbols.length === 1) {
+        symbolMultiSelectLabel.innerText = selectedSymbols[0];
+      } else {
+        symbolMultiSelectLabel.innerText = `${selectedSymbols.length} symbols`;
+      }
+    }
+
     // CLEAR DATA BUTTON
     clearDataBtn.addEventListener('click', () => {
       allData = {};
-      symbolSelect.innerHTML = '';
+      selectedSymbols = [];
+      allSymbolList = [];
+      symbolMultiSelectList.innerHTML = '';
+      updateSymbolLabel();
       heatmapsContainer.innerHTML = '';
       currentMaxH.textContent = 'Current Max H: --';
     });
@@ -260,20 +413,6 @@
         });
     });
 
-    function populateSymbols() {
-      symbolSelect.innerHTML = '';
-      Object.keys(allData).forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = opt.text = s;
-        symbolSelect.appendChild(opt);
-      });
-      // Select first symbol by default (for legacy behavior)
-      if (symbolSelect.options.length) {
-        symbolSelect.options[0].selected = true;
-        drawHeatmaps();
-      }
-    }
-
     csvInput.addEventListener('change', e => {
       const reader = new FileReader();
       reader.onload = evt => {
@@ -285,7 +424,7 @@
       reader.readAsText(e.target.files[0]);
     });
 
-    // Link sliders & numbers, trigger heatmaps
+    // Controls sync
     [arFloor, arFloorNum].forEach(el => el.oninput = () => {
       arFloor.value = arFloorNum.value = el.value;
       drawHeatmaps();
@@ -299,7 +438,6 @@
       drawHeatmaps();
     });
     [zMin, zMax].forEach(el => el.oninput = drawHeatmaps);
-    symbolSelect.onchange = drawHeatmaps;
 
     function buildFromText(text, source) {
       const lines = text.trim().split(/\r?\n/);
@@ -382,17 +520,21 @@
       }));
     }
 
-    // MULTI-HEATMAP DRAW
     function drawHeatmaps() {
       heatmapsContainer.innerHTML = '';
-      const selected = Array.from(symbolSelect.selectedOptions).map(o => o.value);
-      if (!selected.length) {
+      if (!selectedSymbols.length) {
         currentMaxH.textContent = 'Current Max H: --';
+        const msg = document.createElement('div');
+        msg.style.textAlign = 'center';
+        msg.style.margin = '60px 0 40px 0';
+        msg.style.color = '#666';
+        msg.style.fontSize = '1.15em';
+        msg.innerHTML = 'Select one or more symbols above to view heatmaps.';
+        heatmapsContainer.appendChild(msg);
         return;
       }
       let overallMaxH = -Infinity;
-
-      selected.forEach(symbol => {
+      selectedSymbols.forEach(symbol => {
         const D = allData[symbol];
         if (!D) return;
         const floor = +arFloor.value;
@@ -488,9 +630,7 @@
       const hColName = `H (Rmin${floor}|Dmin${minMD}|Dmax${ceilMD})`;
 
       let csv = `Symbol,Days,RSI,AR,MD,Calmar,${hColName}\n`;
-      Array.from(symbolSelect.options).forEach(opt => {
-        if (!opt.selected) return;
-        const symbol = opt.value;
+      selectedSymbols.forEach(symbol => {
         const D = allData[symbol];
         if (!D) return;
         const H = computeH(D.ar, D.md, floor, minMD);
