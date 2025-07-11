@@ -23,8 +23,7 @@
     #otherSourceBox { width: 80px; font-size: 0.9em; margin-left: 6px; }
     #clearDataBtn { margin-left: 12px; padding: 2px 12px; border-radius: 6px; border: 1px solid #aaa; background: #fafafa; cursor: pointer; }
     #clearDataBtn:hover { background: #eee; }
-    #exportCSVBtn { margin-top: 10px; padding: 2px 12px; border-radius: 6px; border: 1px solid #aaa; background: #fafafa; cursor: pointer; }
-    #exportCSVBtn:hover { background: #eee; }
+    /* Removed old #exportCSVBtn styles */
   </style>
 </head>
 <body>
@@ -74,32 +73,35 @@
         <label><input type="checkbox" id="decimalToPercentBox"> Decimal → %</label>
         <span style="font-size:0.9em; color:#555;">(select prior to upload)</span>
       </div>
-      <!-- Required CSV Format Card (add above or below your file upload box) -->
-<div style="background: #fafbfc; border: 1px solid #e1e4e8; border-radius: 6px; margin: 20px 0 10px 0; padding: 14px;">
-  <div style="font-weight: bold; margin-bottom: 8px;">Required CSV Format:</div>
-  <table style="border-collapse: collapse; width: 100%; background: white; border: 1px solid #e1e4e8;">
-    <tr>
-      <th style="border: 1px solid #e1e4e8; padding: 5px 14px; font-weight: 600; background: #f6f8fa;">Symbol</th>
-      <th style="border: 1px solid #e1e4e8; padding: 5px 14px; font-weight: 600; background: #f6f8fa;">Days</th>
-      <th style="border: 1px solid #e1e4e8; padding: 5px 14px; font-weight: 600; background: #f6f8fa;">RSI</th>
-      <th style="border: 1px solid #e1e4e8; padding: 5px 14px; font-weight: 600; background: #f6f8fa;">AR</th>
-      <th style="border: 1px solid #e1e4e8; padding: 5px 14px; font-weight: 600; background: #f6f8fa;">MD</th>
-    </tr>
-    <tr>
-      <td style="border: 1px solid #e1e4e8; padding: 5px 14px;">TQQQ</td>
-      <td style="border: 1px solid #e1e4e8; padding: 5px 14px;">9</td>
-      <td style="border: 1px solid #e1e4e8; padding: 5px 14px;">82</td>
-      <td style="border: 1px solid #e1e4e8; padding: 5px 14px;">13.59%</td>
-      <td style="border: 1px solid #e1e4e8; padding: 5px 14px;">9.63%</td>
-    </tr>
-  </table>
-  <div style="color: #008000; font-size: 0.98em; margin-top: 6px;">
-    &#10003; Use these exact headers (<b>column order doesn't matter</b>)
-  </div>
-</div>
-
-      <div class="control"><label>Upload CSV:</label><input type="file" id="csvInput" accept=".csv"></div>
-      <button id="exportCSVBtn">Export CSV</button>
+      <!-- Required CSV Format Card -->
+      <div style="background: #fafbfc; border: 1px solid #e1e4e8; border-radius: 6px; margin: 20px 0 10px 0; padding: 14px;">
+        <div style="font-weight: bold; margin-bottom: 8px;">Required CSV Format:</div>
+        <table style="border-collapse: collapse; width: 100%; background: white; border: 1px solid #e1e4e8;">
+          <tr>
+            <th style="border: 1px solid #e1e4e8; padding: 5px 14px; font-weight: 600; background: #f6f8fa;">Symbol</th>
+            <th style="border: 1px solid #e1e4e8; padding: 5px 14px; font-weight: 600; background: #f6f8fa;">Days</th>
+            <th style="border: 1px solid #e1e4e8; padding: 5px 14px; font-weight: 600; background: #f6f8fa;">RSI</th>
+            <th style="border: 1px solid #e1e4e8; padding: 5px 14px; font-weight: 600; background: #f6f8fa;">AR</th>
+            <th style="border: 1px solid #e1e4e8; padding: 5px 14px; font-weight: 600; background: #f6f8fa;">MD</th>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #e1e4e8; padding: 5px 14px;">TQQQ</td>
+            <td style="border: 1px solid #e1e4e8; padding: 5px 14px;">9</td>
+            <td style="border: 1px solid #e1e4e8; padding: 5px 14px;">82</td>
+            <td style="border: 1px solid #e1e4e8; padding: 5px 14px;">13.59%</td>
+            <td style="border: 1px solid #e1e4e8; padding: 5px 14px;">9.63%</td>
+          </tr>
+        </table>
+        <div style="color: #008000; font-size: 0.98em; margin-top: 6px;">
+          &#10003; Use these exact headers (<b>column order doesn't matter</b>)
+        </div>
+      </div>
+      <!-- Styled Upload & Download controls -->
+      <div style="display: flex; align-items: center; margin-bottom: 10px;">
+        <label for="csvInput" style="font-weight: bold; margin-right: 8px; margin-bottom: 0;">Upload CSV:</label>
+        <input type="file" id="csvInput" accept=".csv" style="flex: 1;">
+      </div>
+      <button id="exportCSVBtn" style="width: 100%; padding: 7px 0; margin: 0; background: #1976d2; color: #fff; border: none; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer;">Download Data</button>
     </div>
   </div>
   <div id="edgeContainer"><div id="hoverY"></div><div id="heatmap"></div></div>
@@ -284,7 +286,6 @@
       }));
     }
 
-    // FULL DRAWHEATMAP FUNCTION
     function drawHeatmap() {
       const s = symbolSelect.value;
       if (!s) return;
