@@ -52,7 +52,6 @@
       color: #189c2f;
       margin-left: 7px;
     }
-    /* Small modal for CSV template */
     #csvModal {
       display: none;
       position: fixed;
@@ -98,12 +97,23 @@
       cursor: pointer;
     }
     #closeModalBtn:hover { color: #333; }
-    /* Heatmap spacing */
-    #edgeContainer { display: flex; align-items: flex-start; }
-    #hoverY { width: 80px; text-align: right; margin-right: 8px; min-height: 60vh; line-height: 60vh; }
-    #heatmap { flex: 1; height: 60vh; }
-    #hoverX-container { display: flex; justify-content: center; margin-top: 8px; }
-    #hoverX { font-style: italic; color: #333; }
+    .heatmap-section {
+      margin-top: 24px;
+      padding-bottom: 34px;
+      border-bottom: 1px solid #eee;
+    }
+    .heatmap-section:last-child { border-bottom: none; }
+    .heatmap-title {
+      font-size: 1.23em;
+      font-weight: bold;
+      margin-bottom: 2px;
+      color: #1b365d;
+      letter-spacing: 0.03em;
+    }
+    .currentMaxH-label {
+      font-weight: bold;
+      margin-left:12px;
+    }
   </style>
 </head>
 <body>
@@ -114,7 +124,7 @@
       </div>
       <div style="font-weight:bold; margin-bottom:6px;">
         Symbol:
-        <select id="symbolSelect"></select>
+        <select id="symbolSelect" multiple size="4" style="min-width:120px;"></select>
         <button id="clearDataBtn" style="margin-left:10px; font-size:0.98em;">Clear Data</button>
       </div>
       <div><b>AR Min. (%):</b>
@@ -132,7 +142,7 @@
       <div style="margin-top: 6px;">
         <b>Colorbar Min H:</b> <input type="number" id="zMin" step="0.01" value="-1" style="width:48px;">
         <b style="margin-left:6px;">Colorbar Max H:</b> <input type="number" id="zMax" step="0.01" value="1" style="width:48px;">
-        <span id="currentMaxH" style="font-weight: bold; margin-left:12px;">Current Max H: --</span>
+        <span id="currentMaxH" class="currentMaxH-label">Current Max H: --</span>
       </div>
     </div>
     <div class="right-controls">
@@ -146,7 +156,6 @@
           <option>Other</option>
         </select>
       </div>
-      <!-- CSV upload comes before Decimal → % -->
       <div class="rc-row">
         <label style="font-weight: bold;">Upload <span class="csv-link" id="showCsvTemplate">CSV</span>:</label>
         <input type="file" id="csvInput" accept=".csv">
@@ -190,8 +199,8 @@
     </div>
   </div>
 
-  <div id="edgeContainer"><div id="hoverY"></div><div id="heatmap"></div></div>
-  <div id="hoverX-container"><div id="hoverX"></div></div>
+  <!-- Stacked heatmaps -->
+  <div id="heatmapsContainer"></div>
 
   <script>
     // CSV MODAL LOGIC
@@ -219,22 +228,18 @@
           mdCeilNum = document.getElementById('mdCeilNum'),
           zMin = document.getElementById('zMin'),
           zMax = document.getElementById('zMax'),
-          hoverX = document.getElementById('hoverX'),
-          hoverY = document.getElementById('hoverY'),
           currentMaxH = document.getElementById('currentMaxH'),
-          heatDiv = document.getElementById('heatmap'),
           dataSourceSelect = document.getElementById('dataSourceSelect'),
           clearDataBtn = document.getElementById('clearDataBtn'),
           decimalToPercentBox = document.getElementById('decimalToPercentBox'),
-          exportCSVBtn = document.getElementById('exportCSVBtn');
+          exportCSVBtn = document.getElementById('exportCSVBtn'),
+          heatmapsContainer = document.getElementById('heatmapsContainer');
 
     // CLEAR DATA BUTTON
     clearDataBtn.addEventListener('click', () => {
       allData = {};
       symbolSelect.innerHTML = '';
-      Plotly.purge(heatDiv);
-      hoverX.innerText = '';
-      hoverY.innerText = '';
+      heatmapsContainer.innerHTML = '';
       currentMaxH.textContent = 'Current Max H: --';
     });
 
@@ -262,9 +267,10 @@
         opt.value = opt.text = s;
         symbolSelect.appendChild(opt);
       });
+      // Select first symbol by default (for legacy behavior)
       if (symbolSelect.options.length) {
-        symbolSelect.selectedIndex = 0;
-        drawHeatmap();
+        symbolSelect.options[0].selected = true;
+        drawHeatmaps();
       }
     }
 
@@ -279,22 +285,22 @@
       reader.readAsText(e.target.files[0]);
     });
 
+    // Link sliders & numbers, trigger heatmaps
     [arFloor, arFloorNum].forEach(el => el.oninput = () => {
       arFloor.value = arFloorNum.value = el.value;
-      drawHeatmap();
+      drawHeatmaps();
     });
     [mdMin, mdMinNum].forEach(el => el.oninput = () => {
       mdMin.value = mdMinNum.value = el.value;
-      drawHeatmap();
+      drawHeatmaps();
     });
     [mdCeil, mdCeilNum].forEach(el => el.oninput = () => {
       mdCeil.value = mdCeilNum.value = el.value;
-      drawHeatmap();
+      drawHeatmaps();
     });
-    [zMin, zMax].forEach(el => el.oninput = drawHeatmap);
-    symbolSelect.onchange = drawHeatmap;
+    [zMin, zMax].forEach(el => el.oninput = drawHeatmaps);
+    symbolSelect.onchange = drawHeatmaps;
 
-    // Accepts new param: source
     function buildFromText(text, source) {
       const lines = text.trim().split(/\r?\n/);
       if (!lines.length) return;
@@ -369,7 +375,6 @@
       });
     }
 
-    // All slider logic now uses raw percent units
     function computeH(ar, md, floor, minMD) {
       return ar.map((row, i) => row.map((v, j) => {
         if (v == null) return null;
@@ -377,85 +382,117 @@
       }));
     }
 
-    // FULL DRAWHEATMAP FUNCTION
-    function drawHeatmap() {
-      const s = symbolSelect.value;
-      if (!s) return;
-      const D = allData[s];
-      const floor = +arFloor.value;
-      const minMD = +mdMin.value;
-      const ceilMD = +mdCeil.value;
-      const zminVal = +zMin.value;
-      const zmaxVal = +zMax.value;
-      const H = computeH(D.ar, D.md, floor, minMD);
-
-      // MD ceiling mask: at 0 mask everything, at 100 mask nothing, in between mask values above slider.
-      const EPSILON = 1e-6;
-      let mask;
-      if (ceilMD <= EPSILON) {
-        mask = D.md.map(row => row.map(() => 1));
-      } else if (ceilMD >= 100 - EPSILON) {
-        mask = D.md.map(row => row.map(() => 0));
-      } else {
-        mask = D.md.map(row => row.map(v => (v != null && v > ceilMD) ? 1 : 0));
+    // MULTI-HEATMAP DRAW
+    function drawHeatmaps() {
+      heatmapsContainer.innerHTML = '';
+      const selected = Array.from(symbolSelect.selectedOptions).map(o => o.value);
+      if (!selected.length) {
+        currentMaxH.textContent = 'Current Max H: --';
+        return;
       }
+      let overallMaxH = -Infinity;
 
-      // Compute current max H
-      let maxH = -Infinity;
-      H.forEach(row => row.forEach(v => { if (v != null && v > maxH) maxH = v; }));
-      currentMaxH.textContent = 'Current Max H: ' + maxH.toFixed(3);
+      selected.forEach(symbol => {
+        const D = allData[symbol];
+        if (!D) return;
+        const floor = +arFloor.value;
+        const minMD = +mdMin.value;
+        const ceilMD = +mdCeil.value;
+        const zminVal = +zMin.value;
+        const zmaxVal = +zMax.value;
+        const H = computeH(D.ar, D.md, floor, minMD);
 
-      Plotly.newPlot(heatDiv, [
-        {
-          z: H,
-          x: D.x,
-          y: D.y,
-          type: 'heatmap',
-          colorscale: [[0, 'green'], [0.5, 'yellow'], [1, 'red']],
-          zmin: zminVal,
-          zmax: zmaxVal,
-          customdata: D.ar.map((r, i) => r.map((_, j) => [D.ar[i][j], D.md[i][j], D.cm[i][j], H[i][j]])),
-          hovertemplate: 'AR: %{customdata[0]:.2f}%<br>MD: %{customdata[1]:.2f}%<br>Calmar: %{customdata[2]:.2f}<br>H: %{customdata[3]:.3f}<extra></extra>'
-        },
-        {
-          z: mask,
-          x: D.x,
-          y: D.y,
-          type: 'heatmap',
-          showscale: false,
-          colorscale: [[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0.5)']],
-          hoverinfo: 'skip'
+        // MD ceiling mask
+        const EPSILON = 1e-6;
+        let mask;
+        if (ceilMD <= EPSILON) {
+          mask = D.md.map(row => row.map(() => 1));
+        } else if (ceilMD >= 100 - EPSILON) {
+          mask = D.md.map(row => row.map(() => 0));
+        } else {
+          mask = D.md.map(row => row.map(v => (v != null && v > ceilMD) ? 1 : 0));
         }
-      ], {
-        margin: { l: 60, r: 60, t: 60, b: 60 },
-        xaxis: { title: 'RSI Threshold' },
-        yaxis: { title: 'Lookback (days)' }
-      }, { responsive: true });
 
-      // Edge labels on hover
-      heatDiv.on('plotly_hover', function(eventData) {
-        var pt = eventData.points[0];
-        document.getElementById('hoverX').innerText = 'RSI: ' + pt.x;
-        document.getElementById('hoverY').innerText = 'Day: ' + pt.y;
+        // Max H for this symbol
+        let maxH = -Infinity;
+        H.forEach(row => row.forEach(v => { if (v != null && v > maxH) maxH = v; }));
+        if (maxH > overallMaxH) overallMaxH = maxH;
+
+        // Create container for this heatmap
+        const section = document.createElement('div');
+        section.className = 'heatmap-section';
+        section.innerHTML = `<div class="heatmap-title">${symbol}</div>
+          <div id="heatmap-${symbol.replace(/[^a-zA-Z0-9]/g, '_')}" style="height: 60vh;"></div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.97em;">
+            <span id="hoverX-${symbol.replace(/[^a-zA-Z0-9]/g, '_')}"></span>
+            <span id="hoverY-${symbol.replace(/[^a-zA-Z0-9]/g, '_')}"></span>
+          </div>`;
+        heatmapsContainer.appendChild(section);
+
+        // Draw heatmap in this container
+        const heatDiv = section.querySelector('div[id^="heatmap-"]');
+        Plotly.newPlot(heatDiv, [
+          {
+            z: H,
+            x: D.x,
+            y: D.y,
+            type: 'heatmap',
+            colorscale: [[0, 'green'], [0.5, 'yellow'], [1, 'red']],
+            zmin: zminVal,
+            zmax: zmaxVal,
+            customdata: D.ar.map((r, i) => r.map((_, j) => [D.ar[i][j], D.md[i][j], D.cm[i][j], H[i][j]])),
+            hovertemplate: 'AR: %{customdata[0]:.2f}%<br>MD: %{customdata[1]:.2f}%<br>Calmar: %{customdata[2]:.2f}<br>H: %{customdata[3]:.3f}<extra></extra>'
+          },
+          {
+            z: mask,
+            x: D.x,
+            y: D.y,
+            type: 'heatmap',
+            showscale: false,
+            colorscale: [[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0.5)']],
+            hoverinfo: 'skip'
+          }
+        ], {
+          margin: { l: 60, r: 60, t: 60, b: 60 },
+          xaxis: { title: 'RSI Threshold' },
+          yaxis: { title: 'Lookback (days)' }
+        }, { responsive: true });
+
+        // Add crosshairs to each heatmap (per symbol)
+        const hoverX = section.querySelector(`#hoverX-${symbol.replace(/[^a-zA-Z0-9]/g, '_')}`);
+        const hoverY = section.querySelector(`#hoverY-${symbol.replace(/[^a-zA-Z0-9]/g, '_')}`);
+        heatDiv.on('plotly_hover', function(eventData) {
+          var pt = eventData.points[0];
+          hoverX.innerText = 'RSI: ' + pt.x;
+          hoverY.innerText = 'Day: ' + pt.y;
+        });
+        heatDiv.on('plotly_unhover', function() {
+          hoverX.innerText = '';
+          hoverY.innerText = '';
+        });
       });
-      heatDiv.on('plotly_unhover', function() {
-        document.getElementById('hoverX').innerText = '';
-        document.getElementById('hoverY').innerText = '';
-      });
+
+      // Show overall max H across all selected heatmaps
+      if (overallMaxH === -Infinity) {
+        currentMaxH.textContent = 'Current Max H: --';
+      } else {
+        currentMaxH.textContent = 'Current Max H: ' + overallMaxH.toFixed(3);
+      }
     }
 
-    // ---- CSV Export Functionality ----
+    // CSV Export for ALL selected
     exportCSVBtn.addEventListener('click', function() {
-      // Get slider values
       const floor = +arFloor.value;
       const minMD = +mdMin.value;
       const ceilMD = +mdCeil.value;
       const hColName = `H (Rmin${floor}|Dmin${minMD}|Dmax${ceilMD})`;
 
-      // CSV Header
       let csv = `Symbol,Days,RSI,AR,MD,Calmar,${hColName}\n`;
-      Object.keys(allData).forEach(symbol => {
+      Array.from(symbolSelect.options).forEach(opt => {
+        if (!opt.selected) return;
+        const symbol = opt.value;
         const D = allData[symbol];
+        if (!D) return;
         const H = computeH(D.ar, D.md, floor, minMD);
         for (let i = 0; i < D.y.length; ++i) {
           for (let j = 0; j < D.x.length; ++j) {
@@ -472,7 +509,6 @@
           }
         }
       });
-      // Download
       const blob = new Blob([csv], {type: "text/csv"});
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
@@ -484,6 +520,7 @@
         URL.revokeObjectURL(a.href);
       }, 0);
     });
+
   </script>
 </body>
 </html>
