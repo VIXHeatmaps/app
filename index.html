@@ -23,6 +23,8 @@
     #otherSourceBox { width: 80px; font-size: 0.9em; margin-left: 6px; }
     #clearDataBtn { margin-left: 12px; padding: 2px 12px; border-radius: 6px; border: 1px solid #aaa; background: #fafafa; cursor: pointer; }
     #clearDataBtn:hover { background: #eee; }
+    #exportCsvBtn { margin-top: 4px; padding: 2px 12px; border-radius: 6px; border: 1px solid #aaa; background: #fafafa; cursor: pointer; }
+    #exportCsvBtn:hover { background: #eee; }
   </style>
 </head>
 <body>
@@ -73,6 +75,7 @@
         <span style="font-size:0.9em; color:#555;">(select prior to upload)</span>
       </div>
       <div class="control"><label>Upload CSV:</label><input type="file" id="csvInput" accept=".csv"></div>
+      <div class="control"><button id="exportCsvBtn">Export CSV</button></div>
     </div>
   </div>
   <div id="edgeContainer"><div id="hoverY"></div><div id="heatmap"></div></div>
@@ -97,7 +100,8 @@
           dataSourceSelect = document.getElementById('dataSourceSelect'),
           otherSourceBox = document.getElementById('otherSourceBox'),
           clearDataBtn = document.getElementById('clearDataBtn'),
-          decimalToPercentBox = document.getElementById('decimalToPercentBox');
+          decimalToPercentBox = document.getElementById('decimalToPercentBox'),
+          exportCsvBtn = document.getElementById('exportCsvBtn');
 
     // Show or hide the Other input
     dataSourceSelect.addEventListener('change', () => {
@@ -185,7 +189,6 @@
         rsi: ['rsi', 'relative strength index'],
         ar: ['ar', 'annualized return', 'cagr'],
         md: ['md', 'max drawdown', 'drawdown']
-        // Calmar will be calculated, not loaded
       };
 
       function findCol(headers, aliases) {
@@ -310,6 +313,42 @@
         document.getElementById('hoverY').innerText = '';
       });
     }
+
+    // EXPORT CSV FUNCTION
+    exportCsvBtn.addEventListener('click', function () {
+      const Rmin = arFloor.value;
+      const Dmin = mdMin.value;
+      const Dmax = mdCeil.value;
+      let csv = `Symbol,Days,RSI,AR,MD,Calmar,H (Rmin${Rmin}|Dmin${Dmin}|Dmax${Dmax})\n`;
+      Object.entries(allData).forEach(([symbol, D]) => {
+        for (let i = 0; i < D.y.length; ++i) {
+          for (let j = 0; j < D.x.length; ++j) {
+            const ar = D.ar[i][j];
+            const md = D.md[i][j];
+            const cm = D.cm[i][j];
+            if (ar == null || md == null) continue;
+            // Compute H using current slider values
+            const H = ((ar - (+Rmin) / 100) / Math.max(md, (+Dmin) / 100));
+            csv += [
+              `"${symbol.replace(/"/g, '""')}"`,
+              D.y[i],
+              D.x[j],
+              ar,
+              md,
+              cm,
+              H
+            ].join(',') + "\n";
+          }
+        }
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'heatmap_export.csv';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
   </script>
 </body>
 </html>
