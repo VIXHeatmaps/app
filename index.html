@@ -23,26 +23,26 @@
     #otherSourceBox { width: 80px; font-size: 0.9em; margin-left: 6px; }
     #clearDataBtn { margin-left: 12px; padding: 2px 12px; border-radius: 6px; border: 1px solid #aaa; background: #fafafa; cursor: pointer; }
     #clearDataBtn:hover { background: #eee; }
-    /* Button styling - match default upload input look */
-    .button-minimal {
-      padding: 5px 18px;
-      border-radius: 6px;
-      border: 1px solid #aaa;
-      background: #fafafa;
+    .file-btn {
+      display: inline-block;
+      padding: 4px 18px;
       font-size: 1em;
+      font-family: inherit;
+      color: #222;
+      background: #fafafa;
+      border: 1px solid #aaa;
+      border-radius: 6px;
       cursor: pointer;
+      margin-left: 8px;
+      margin-top: 4px;
+      margin-bottom: 0;
+      transition: background 0.1s;
       font-weight: normal;
-      margin-top: 8px;
     }
-    .button-minimal:hover {
+    .file-btn:hover, .file-btn:focus {
       background: #eee;
+      border-color: #888;
     }
-    /* Remove blue for Export button, just default minimal */
-    .upload-label, .export-label {
-      font-weight: bold;
-      margin-right: 8px;
-    }
-    /* Card/table styling for CSV format */
     .csv-card {
       background: #fafbfc;
       border: 1px solid #e1e4e8;
@@ -70,27 +70,6 @@
       font-size: 0.98em;
       margin-top: 6px;
     }
-    .file-btn {
-  display: inline-block;
-  padding: 3px 12px;
-  font-size: 1em;
-  font-family: inherit;
-  color: #222;
-  background: #f6f6f6;
-  border: 1px solid #bbb;
-  border-radius: 4px;
-  box-sizing: border-box;
-  cursor: pointer;
-  margin-left: 0;
-  margin-top: 2px;
-  margin-bottom: 0;
-  transition: background 0.1s;
-}
-.file-btn:hover, .file-btn:focus {
-  background: #e5e5e5;
-  border-color: #888;
-}
-
   </style>
 </head>
 <body>
@@ -140,7 +119,6 @@
         <label><input type="checkbox" id="decimalToPercentBox"> Decimal → %</label>
         <span style="font-size:0.9em; color:#555;">(select prior to upload)</span>
       </div>
-
       <!-- Required CSV Format Card -->
       <div class="csv-card">
         <div style="font-weight: bold; margin-bottom: 8px;">Required CSV Format:</div>
@@ -164,15 +142,10 @@
           &#10003; Use these exact headers (<b>column order doesn't matter</b>)
         </div>
       </div>
-
       <div class="control">
-        <span class="upload-label">Upload CSV:</span>
+        <label>Upload CSV:</label>
         <input type="file" id="csvInput" accept=".csv">
-      </div>
-      <div class="control">
-        <span class="export-label">Export CSV:</span>
-       <button id="exportCSVBtn" class="file-btn">Download Data</button>
-
+        <button id="exportCSVBtn" class="file-btn">Download Data</button>
       </div>
     </div>
   </div>
