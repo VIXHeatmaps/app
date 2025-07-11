@@ -4,16 +4,18 @@
   <meta charset="utf-8">
   <title>Heatmap Viewer</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
- <style>
-    body {
-      font-family: sans-serif;
+  <style>
+    html, body {
+      font-family: 'Open Sans', 'Arial', sans-serif;
       font-size: 12px;
-      margin: 16px;
+      margin: 14px;
+      background: #fafbfc;
+      color: #222;
     }
     .header { display: flex; justify-content: space-between; align-items: flex-start; }
     .controls { flex: 1; }
     .right-controls {
-      min-width: 270px;
+      min-width: 240px;
       margin-top: 0;
       display: flex;
       flex-direction: column;
@@ -40,7 +42,9 @@
       cursor: pointer;
       font-weight: 600;
       margin: 0 2px;
+      transition: color 0.12s;
     }
+    .csv-link:hover { color: #189c2f; }
     .export-btn {
       background: #1884f7;
       color: white;
@@ -52,6 +56,7 @@
       margin-top: 0;
       font-weight: 500;
       transition: background 0.13s;
+      box-shadow: 0 1px 2px rgba(24,132,247,0.04);
     }
     .export-btn:hover { background: #0059b2; }
     .select-note { color: #189c2f; margin-left: 5px; }
@@ -60,7 +65,7 @@
       position: fixed;
       z-index: 12;
       left: 0; top: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.17);
+      background: rgba(0,0,0,0.11);
       align-items: center;
       justify-content: center;
     }
@@ -68,9 +73,9 @@
       background: #fff;
       border-radius: 6px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.12);
-      padding: 16px 18px 10px 18px;
-      min-width: 220px;
-      max-width: 95vw;
+      padding: 14px 18px 10px 18px;
+      min-width: 180px;
+      max-width: 97vw;
       min-height: 40px;
       font-size: 12px;
     }
@@ -97,15 +102,15 @@
       margin-right: -8px;
       border: none;
       background: none;
-      font-size: 17px;
+      font-size: 16px;
       color: #888;
       cursor: pointer;
       font-family: inherit;
     }
     #closeModalBtn:hover { color: #333; }
     .heatmap-section {
-      margin-top: 18px;
-      padding-bottom: 18px;
+      margin-top: 15px;
+      padding-bottom: 13px;
       border-bottom: 1px solid #eee;
       font-size: 12px;
     }
@@ -113,21 +118,21 @@
     .heatmap-title {
       font-size: 13px;
       font-weight: bold;
-      margin-bottom: 1px;
+      margin-bottom: 2px;
       color: #1b365d;
       letter-spacing: 0.01em;
     }
     .currentMaxH-label {
       font-weight: bold;
-      margin-left:10px;
+      margin-left: 10px;
       font-size: 12px;
     }
     /* Multi-Select Styles */
     .symbol-multiselect {
       position: relative;
-      width: 180px;
+      width: 140px;
       max-width: 100%;
-      margin-bottom: 5px;
+      margin-bottom: 3px;
       z-index: 11;
       display: inline-block;
       font-size: 12px;
@@ -136,7 +141,7 @@
       border: 1px solid #bbb;
       border-radius: 5px;
       padding: 2px 6px;
-      min-height: 18px;
+      min-height: 17px;
       cursor: pointer;
       font-size: 12px;
       background: #fafbfc;
@@ -159,16 +164,16 @@
     }
     .symbol-multiselect-list {
       position: absolute;
-      top: 107%;
+      top: 108%;
       left: 0;
       right: 0;
-      max-height: 120px;
-      min-width: 120px;
+      max-height: 85px;
+      min-width: 100px;
       background: #fff;
       border: 1px solid #1884f7;
       border-radius: 6px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.07);
-      padding: 4px 0 4px 0;
+      padding: 3px 0 3px 0;
       overflow-y: auto;
       z-index: 99;
       font-size: 12px;
@@ -176,7 +181,7 @@
     .symbol-multiselect-list label {
       display: flex;
       align-items: center;
-      padding: 2px 6px;
+      padding: 1px 6px;
       cursor: pointer;
       white-space: nowrap;
       transition: background 0.07s;
@@ -190,38 +195,47 @@
       font-family: inherit;
       padding: 2px 2px;
     }
+    /* Make input controls even tighter */
+    input[type="range"], input[type="number"], select {
+      height: 20px;
+    }
+    button, input[type="file"] {
+      height: 22px;
+    }
+    /* Remove extra spacing from select */
+    select { padding: 1px 2px; }
   </style>
 </head>
 <body>
   <div style="display: flex; justify-content: space-between; align-items: flex-start;">
     <div class="controls">
-      <div style="font-size: 19px; font-style: italic; margin-bottom: 14px; font-family: inherit;">
-        <b>Metric:</b> H = (AR – AR<sub>min</sub>) / max(MD, MD<sub>min</sub>) <span style="font-size: 16px;">(decimal)</span>
+      <div style="font-style: italic; margin-bottom: 8px;">
+        <b>Metric:</b> H = (AR – AR<sub>min</sub>) / max(MD, MD<sub>min</sub>) <span>(decimal)</span>
       </div>
-      <div style="font-weight:bold; margin-bottom:6px; font-size: 16px; font-family: inherit;">
+      <div style="font-weight:bold; margin-bottom:3px;">
         Symbol:
         <!-- Custom Collapsing Multi-Select -->
         <div class="symbol-multiselect" id="symbolMultiSelectBox">
           <div class="selected-label" tabindex="0" id="symbolMultiSelectLabel">Select Symbol</div>
           <div class="symbol-multiselect-list" id="symbolMultiSelectList" style="display:none;"></div>
         </div>
-        <button id="clearDataBtn" style="margin-left:10px; font-size:16px; font-family: inherit;">Clear Data</button>
+        <button id="clearDataBtn" style="margin-left:7px;">Clear Data</button>
       </div>
-      <div style="font-size:16px; font-family: inherit;"><b>AR Min. (%):</b>
-        <input type="range" id="arFloor" min="0" max="100" step="0.1" value="3" style="width:180px;vertical-align:middle;">
-        <input type="number" id="arFloorNum" min="0" max="100" step="0.1" value="3" style="width:50px;">
+      <div><b>AR Min. (%):</b>
+        <input type="range" id="arFloor" min="0" max="100" step="0.1" value="3" style="width:120px;vertical-align:middle;">
+        <input type="number" id="arFloorNum" min="0" max="100" step="0.1" value="3" style="width:36px;">
       </div>
-      <div style="font-size:16px; font-family: inherit;"><b>MD Min. (%):</b>
-        <input type="range" id="mdMin" min="0" max="100" step="0.1" value="5" style="width:180px;vertical-align:middle;">
-        <input type="number" id="mdMinNum" min="0" max="100" step="0.1" value="5" style="width:50px;">
+      <div><b>MD Min. (%):</b>
+        <input type="range" id="mdMin" min="0" max="100" step="0.1" value="5" style="width:120px;vertical-align:middle;">
+        <input type="number" id="mdMinNum" min="0" max="100" step="0.1" value="5" style="width:36px;">
       </div>
-      <div style="font-size:16px; font-family: inherit;"><b>MD Max (%):</b>
-        <input type="range" id="mdCeil" min="0" max="100" step="0.1" value="50" style="width:180px;vertical-align:middle;">
-        <input type="number" id="mdCeilNum" min="0" max="100" step="0.1" value="50" style="width:50px;">
+      <div><b>MD Max (%):</b>
+        <input type="range" id="mdCeil" min="0" max="100" step="0.1" value="50" style="width:120px;vertical-align:middle;">
+        <input type="number" id="mdCeilNum" min="0" max="100" step="0.1" value="50" style="width:36px;">
       </div>
-      <div style="margin-top: 6px; font-size:16px; font-family: inherit;">
-        <b>Colorbar Min H:</b> <input type="number" id="zMin" step="0.01" value="-1" style="width:48px;">
-        <b style="margin-left:6px;">Colorbar Max H:</b> <input type="number" id="zMax" step="0.01" value="1" style="width:48px;">
+      <div style="margin-top: 4px;">
+        <b>Colorbar Min H:</b> <input type="number" id="zMin" step="0.01" value="-1" style="width:36px;">
+        <b style="margin-left:5px;">Colorbar Max H:</b> <input type="number" id="zMax" step="0.01" value="1" style="width:36px;">
         <span id="currentMaxH" class="currentMaxH-label">Current Max H: --</span>
       </div>
     </div>
@@ -270,10 +284,10 @@
           <td>9.63%</td>
         </tr>
       </table>
-      <div style="color: #008000; font-size: 16px; margin-top: 6px; font-family: inherit;">
+      <div style="color: #008000; font-size: 12px; margin-top: 6px;">
         ✓ Use these exact headers (<b>column order doesn't matter</b>)
       </div>
-      <div style="margin-top:10px; color:#444; font-size: 16px; font-family: inherit;">
+      <div style="margin-top:10px; color:#444; font-size: 12px;">
         You may also use: <b>Ticker</b>, <b>Name</b> for Symbol; <b>Lookback</b>, <b>Window</b> for Days; <b>Drawdown</b> for MD, <b>CAGR</b> for AR, etc.
       </div>
     </div>
@@ -537,9 +551,9 @@
         currentMaxH.textContent = 'Current Max H: --';
         const msg = document.createElement('div');
         msg.style.textAlign = 'center';
-        msg.style.margin = '60px 0 40px 0';
+        msg.style.margin = '30px 0 18px 0';
         msg.style.color = '#666';
-        msg.style.fontSize = '1.15em';
+        msg.style.fontSize = '1em';
         msg.innerHTML = 'Select one or more symbols above to view heatmaps.';
         heatmapsContainer.appendChild(msg);
         return;
@@ -607,8 +621,8 @@
           }
         ], {
           margin: { l: 60, r: 60, t: 60, b: 60 },
-          xaxis: { title: 'RSI Threshold' },
-          yaxis: { title: 'Lookback (days)' }
+          xaxis: { title: 'RSI Threshold', tickfont: {size: 12} },
+          yaxis: { title: 'Lookback (days)', tickfont: {size: 12} }
         }, { responsive: true });
 
         // Add crosshairs to each heatmap (per symbol)
