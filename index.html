@@ -271,8 +271,11 @@
       const zmaxVal = +zMax.value;
       const H = computeH(D.ar, D.md, floor, minMD);
 
-      // Mask for MD ceiling overlay
-      const mask = D.md.map(row => row.map(v => (v != null && v > ceilMD) ? 1 : 0));
+      // Mask for MD ceiling overlay, edge case fix for max=100
+const mask = D.md.map(row => row.map(v =>
+  (v != null && v > ceilMD && ceilMD < 100) ? 1 : 0
+));
+
 
       // Compute current max H
       let maxH = -Infinity;
