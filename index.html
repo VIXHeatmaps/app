@@ -146,14 +146,15 @@
           <option>Other</option>
         </select>
       </div>
+      <!-- CSV upload comes before Decimal → % -->
+      <div class="rc-row">
+        <label style="font-weight: bold;">Upload <span class="csv-link" id="showCsvTemplate">CSV</span>:</label>
+        <input type="file" id="csvInput" accept=".csv">
+      </div>
       <div class="rc-row">
         <input type="checkbox" id="decimalToPercentBox">
         <label for="decimalToPercentBox" style="font-weight:normal; margin-left:2px;">Decimal → %</label>
         <span class="select-note">(select prior to upload)</span>
-      </div>
-      <div class="rc-row">
-        <label style="font-weight: bold;">Upload <span class="csv-link" id="showCsvTemplate">CSV</span>:</label>
-        <input type="file" id="csvInput" accept=".csv">
       </div>
       <button id="exportCSVBtn" class="export-btn">Download Data</button>
     </div>
