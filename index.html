@@ -260,6 +260,7 @@
       }));
     }
 
+    // FULL DRAWHEATMAP FUNCTION
     function drawHeatmap() {
       const s = symbolSelect.value;
       if (!s) return;
@@ -271,8 +272,7 @@
       const zmaxVal = +zMax.value;
       const H = computeH(D.ar, D.md, floor, minMD);
 
-      // --- MD ceiling mask logic ---
-      // At 0: everything masked. At 100: nothing masked. Between: mask MD > slider.
+      // MD ceiling mask: at 0 mask everything, at 100 mask nothing, in between mask values above slider.
       const EPSILON = 1e-6;
       let mask;
       if (ceilMD <= EPSILON) {
