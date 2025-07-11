@@ -5,7 +5,11 @@
   <title>Heatmap Viewer</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
-    body { font-family: sans-serif; margin: 20px; }
+    body {
+      font-family: sans-serif;
+      font-size: 16px;
+      margin: 20px;
+    }
     .header { display: flex; justify-content: space-between; align-items: flex-start; }
     .controls { flex: 1; }
     .right-controls {
@@ -23,6 +27,8 @@
     }
     .rc-row label {
       font-weight: bold;
+      font-size: 16px;
+      font-family: inherit;
     }
     .csv-link {
       color: #0074d9;
@@ -30,7 +36,8 @@
       cursor: pointer;
       font-weight: 600;
       margin: 0 3px;
-      font-size: 1em;
+      font-size: 16px;
+      font-family: inherit;
     }
     .export-btn {
       background: #1884f7;
@@ -38,7 +45,8 @@
       border: none;
       border-radius: 6px;
       padding: 6px 22px;
-      font-size: 1em;
+      font-size: 16px;
+      font-family: inherit;
       cursor: pointer;
       margin-top: 0;
       font-weight: 500;
@@ -48,9 +56,10 @@
       background: #0059b2;
     }
     .select-note {
-      font-size: 0.99em;
+      font-size: 16px;
       color: #189c2f;
       margin-left: 7px;
+      font-family: inherit;
     }
     #csvModal {
       display: none;
@@ -69,22 +78,29 @@
       min-width: 340px;
       max-width: 94vw;
       min-height: 50px;
-      font-size: 1.02em;
+      font-size: 16px;
+      font-family: inherit;
     }
     #csvModal table {
       border-collapse: collapse;
       width: 100%;
       margin: 10px 0;
       background: #fcfcfc;
+      font-size: 16px;
+      font-family: inherit;
     }
     #csvModal th, #csvModal td {
       border: 1px solid #d6d6d6;
       padding: 5px 14px;
       text-align: center;
+      font-size: 16px;
+      font-family: inherit;
     }
     #csvModal th {
       background: #f7f7f9;
       font-weight: bold;
+      font-size: 16px;
+      font-family: inherit;
     }
     #closeModalBtn {
       float: right;
@@ -92,9 +108,10 @@
       margin-right: -12px;
       border: none;
       background: none;
-      font-size: 1.5em;
+      font-size: 24px;
       color: #888;
       cursor: pointer;
+      font-family: inherit;
     }
     #closeModalBtn:hover { color: #333; }
     .heatmap-section {
@@ -104,17 +121,19 @@
     }
     .heatmap-section:last-child { border-bottom: none; }
     .heatmap-title {
-      font-size: 1.23em;
+      font-size: 19px;
       font-weight: bold;
       margin-bottom: 2px;
       color: #1b365d;
       letter-spacing: 0.03em;
+      font-family: inherit;
     }
     .currentMaxH-label {
       font-weight: bold;
       margin-left:12px;
+      font-family: inherit;
+      font-size: 16px;
     }
-
     /* --- Custom Multi-Select Styles --- */
     .symbol-multiselect {
       position: relative;
@@ -123,6 +142,8 @@
       margin-bottom: 8px;
       z-index: 11;
       display: inline-block;
+      font-size: 16px;
+      font-family: inherit;
     }
     .symbol-multiselect .selected-label {
       border: 1px solid #bbb;
@@ -130,7 +151,8 @@
       padding: 5px 8px;
       min-height: 30px;
       cursor: pointer;
-      font-size: 1em;
+      font-size: 16px;
+      font-family: inherit;
       background: #fafbfc;
       box-shadow: 0 1px 2px rgba(0,0,0,0.02);
       transition: border-color 0.12s;
@@ -144,6 +166,7 @@
       font-size: 0.8em;
       color: #888;
       margin-left: 8px;
+      font-family: inherit;
     }
     .symbol-multiselect.open .selected-label {
       border-color: #1884f7;
@@ -163,7 +186,8 @@
       padding: 7px 0 7px 0;
       overflow-y: auto;
       z-index: 99;
-      font-size: 1em;
+      font-size: 16px;
+      font-family: inherit;
     }
     .symbol-multiselect-list label {
       display: flex;
@@ -172,6 +196,8 @@
       cursor: pointer;
       white-space: nowrap;
       transition: background 0.08s;
+      font-size: 16px;
+      font-family: inherit;
     }
     .symbol-multiselect-list label:hover {
       background: #f2f6ff;
@@ -179,36 +205,41 @@
     .symbol-multiselect-list input[type=checkbox] {
       margin-right: 8px;
     }
+    /* Input, Select, and Button styling for consistency */
+    input[type="range"], input[type="number"], select, button, input[type="file"], label, input[type="checkbox"] {
+      font-size: 16px;
+      font-family: inherit;
+    }
   </style>
 </head>
 <body>
   <div style="display: flex; justify-content: space-between; align-items: flex-start;">
     <div class="controls">
-      <div style="font-size: 1.17em; font-style: italic; margin-bottom: 14px;">
-        <b>Metric:</b> H = (AR – AR<sub>min</sub>) / max(MD, MD<sub>min</sub>) <span style="font-size: 0.96em;">(decimal)</span>
+      <div style="font-size: 19px; font-style: italic; margin-bottom: 14px; font-family: inherit;">
+        <b>Metric:</b> H = (AR – AR<sub>min</sub>) / max(MD, MD<sub>min</sub>) <span style="font-size: 16px;">(decimal)</span>
       </div>
-      <div style="font-weight:bold; margin-bottom:6px;">
+      <div style="font-weight:bold; margin-bottom:6px; font-size: 16px; font-family: inherit;">
         Symbol:
         <!-- Custom Collapsing Multi-Select -->
         <div class="symbol-multiselect" id="symbolMultiSelectBox">
           <div class="selected-label" tabindex="0" id="symbolMultiSelectLabel">Select Symbol</div>
           <div class="symbol-multiselect-list" id="symbolMultiSelectList" style="display:none;"></div>
         </div>
-        <button id="clearDataBtn" style="margin-left:10px; font-size:0.98em;">Clear Data</button>
+        <button id="clearDataBtn" style="margin-left:10px; font-size:16px; font-family: inherit;">Clear Data</button>
       </div>
-      <div><b>AR Min. (%):</b>
+      <div style="font-size:16px; font-family: inherit;"><b>AR Min. (%):</b>
         <input type="range" id="arFloor" min="0" max="100" step="0.1" value="3" style="width:180px;vertical-align:middle;">
         <input type="number" id="arFloorNum" min="0" max="100" step="0.1" value="3" style="width:50px;">
       </div>
-      <div><b>MD Min. (%):</b>
+      <div style="font-size:16px; font-family: inherit;"><b>MD Min. (%):</b>
         <input type="range" id="mdMin" min="0" max="100" step="0.1" value="5" style="width:180px;vertical-align:middle;">
         <input type="number" id="mdMinNum" min="0" max="100" step="0.1" value="5" style="width:50px;">
       </div>
-      <div><b>MD Max (%):</b>
+      <div style="font-size:16px; font-family: inherit;"><b>MD Max (%):</b>
         <input type="range" id="mdCeil" min="0" max="100" step="0.1" value="50" style="width:180px;vertical-align:middle;">
         <input type="number" id="mdCeilNum" min="0" max="100" step="0.1" value="50" style="width:50px;">
       </div>
-      <div style="margin-top: 6px;">
+      <div style="margin-top: 6px; font-size:16px; font-family: inherit;">
         <b>Colorbar Min H:</b> <input type="number" id="zMin" step="0.01" value="-1" style="width:48px;">
         <b style="margin-left:6px;">Colorbar Max H:</b> <input type="number" id="zMax" step="0.01" value="1" style="width:48px;">
         <span id="currentMaxH" class="currentMaxH-label">Current Max H: --</span>
@@ -259,10 +290,10 @@
           <td>9.63%</td>
         </tr>
       </table>
-      <div style="color: #008000; font-size: 0.98em; margin-top: 6px;">
+      <div style="color: #008000; font-size: 16px; margin-top: 6px; font-family: inherit;">
         ✓ Use these exact headers (<b>column order doesn't matter</b>)
       </div>
-      <div style="margin-top:10px; color:#444;">
+      <div style="margin-top:10px; color:#444; font-size: 16px; font-family: inherit;">
         You may also use: <b>Ticker</b>, <b>Name</b> for Symbol; <b>Lookback</b>, <b>Window</b> for Days; <b>Drawdown</b> for MD, <b>CAGR</b> for AR, etc.
       </div>
     </div>
