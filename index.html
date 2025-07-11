@@ -4,30 +4,34 @@
   <meta charset="utf-8">
   <title>Heatmap Viewer</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-  <style>
+ <style>
     body {
       font-family: sans-serif;
-      font-size: 16px;
-      margin: 20px;
+      font-size: 12px;
+      margin: 16px;
     }
     .header { display: flex; justify-content: space-between; align-items: flex-start; }
     .controls { flex: 1; }
     .right-controls {
-      min-width: 350px;
+      min-width: 270px;
       margin-top: 0;
       display: flex;
       flex-direction: column;
       align-items: flex-start;
-      gap: 10px;
+      gap: 7px;
+      font-size: 12px;
     }
     .rc-row {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 7px;
+      font-size: 12px;
     }
-    .rc-row label {
-      font-weight: bold;
-      font-size: 16px;
+    .rc-row label,
+    .csv-link,
+    .export-btn,
+    .select-note {
+      font-size: 12px;
       font-family: inherit;
     }
     .csv-link {
@@ -35,126 +39,108 @@
       text-decoration: underline;
       cursor: pointer;
       font-weight: 600;
-      margin: 0 3px;
-      font-size: 16px;
-      font-family: inherit;
+      margin: 0 2px;
     }
     .export-btn {
       background: #1884f7;
       color: white;
       border: none;
-      border-radius: 6px;
-      padding: 6px 22px;
-      font-size: 16px;
-      font-family: inherit;
+      border-radius: 5px;
+      padding: 3px 12px;
+      font-size: 12px;
       cursor: pointer;
       margin-top: 0;
       font-weight: 500;
       transition: background 0.13s;
     }
-    .export-btn:hover {
-      background: #0059b2;
-    }
-    .select-note {
-      font-size: 16px;
-      color: #189c2f;
-      margin-left: 7px;
-      font-family: inherit;
-    }
+    .export-btn:hover { background: #0059b2; }
+    .select-note { color: #189c2f; margin-left: 5px; }
     #csvModal {
       display: none;
       position: fixed;
       z-index: 12;
       left: 0; top: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.2);
+      background: rgba(0,0,0,0.17);
       align-items: center;
       justify-content: center;
     }
     #csvModal .modal-content {
       background: #fff;
-      border-radius: 7px;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.13);
-      padding: 22px 36px 18px 36px;
-      min-width: 340px;
-      max-width: 94vw;
-      min-height: 50px;
-      font-size: 16px;
-      font-family: inherit;
+      border-radius: 6px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+      padding: 16px 18px 10px 18px;
+      min-width: 220px;
+      max-width: 95vw;
+      min-height: 40px;
+      font-size: 12px;
     }
     #csvModal table {
       border-collapse: collapse;
       width: 100%;
-      margin: 10px 0;
+      margin: 6px 0;
       background: #fcfcfc;
-      font-size: 16px;
-      font-family: inherit;
+      font-size: 12px;
     }
     #csvModal th, #csvModal td {
       border: 1px solid #d6d6d6;
-      padding: 5px 14px;
+      padding: 3px 6px;
       text-align: center;
-      font-size: 16px;
-      font-family: inherit;
+      font-size: 12px;
     }
     #csvModal th {
       background: #f7f7f9;
       font-weight: bold;
-      font-size: 16px;
-      font-family: inherit;
     }
     #closeModalBtn {
       float: right;
-      margin-top: -18px;
-      margin-right: -12px;
+      margin-top: -13px;
+      margin-right: -8px;
       border: none;
       background: none;
-      font-size: 24px;
+      font-size: 17px;
       color: #888;
       cursor: pointer;
       font-family: inherit;
     }
     #closeModalBtn:hover { color: #333; }
     .heatmap-section {
-      margin-top: 24px;
-      padding-bottom: 34px;
+      margin-top: 18px;
+      padding-bottom: 18px;
       border-bottom: 1px solid #eee;
+      font-size: 12px;
     }
     .heatmap-section:last-child { border-bottom: none; }
     .heatmap-title {
-      font-size: 19px;
+      font-size: 13px;
       font-weight: bold;
-      margin-bottom: 2px;
+      margin-bottom: 1px;
       color: #1b365d;
-      letter-spacing: 0.03em;
-      font-family: inherit;
+      letter-spacing: 0.01em;
     }
     .currentMaxH-label {
       font-weight: bold;
-      margin-left:12px;
-      font-family: inherit;
-      font-size: 16px;
+      margin-left:10px;
+      font-size: 12px;
     }
-    /* --- Custom Multi-Select Styles --- */
+    /* Multi-Select Styles */
     .symbol-multiselect {
       position: relative;
-      width: 270px;
+      width: 180px;
       max-width: 100%;
-      margin-bottom: 8px;
+      margin-bottom: 5px;
       z-index: 11;
       display: inline-block;
-      font-size: 16px;
-      font-family: inherit;
+      font-size: 12px;
     }
     .symbol-multiselect .selected-label {
       border: 1px solid #bbb;
-      border-radius: 6px;
-      padding: 5px 8px;
-      min-height: 30px;
+      border-radius: 5px;
+      padding: 2px 6px;
+      min-height: 18px;
       cursor: pointer;
-      font-size: 16px;
-      font-family: inherit;
+      font-size: 12px;
       background: #fafbfc;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+      box-shadow: 0 1px 1px rgba(0,0,0,0.02);
       transition: border-color 0.12s;
       white-space: nowrap;
       overflow: hidden;
@@ -163,10 +149,9 @@
     .symbol-multiselect .selected-label:after {
       content: "▼";
       float: right;
-      font-size: 0.8em;
+      font-size: 10px;
       color: #888;
-      margin-left: 8px;
-      font-family: inherit;
+      margin-left: 4px;
     }
     .symbol-multiselect.open .selected-label {
       border-color: #1884f7;
@@ -174,41 +159,36 @@
     }
     .symbol-multiselect-list {
       position: absolute;
-      top: 110%;
+      top: 107%;
       left: 0;
       right: 0;
-      max-height: 230px;
-      min-width: 180px;
+      max-height: 120px;
+      min-width: 120px;
       background: #fff;
       border: 1px solid #1884f7;
-      border-radius: 8px;
-      box-shadow: 0 3px 18px rgba(0,0,0,0.08);
-      padding: 7px 0 7px 0;
+      border-radius: 6px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      padding: 4px 0 4px 0;
       overflow-y: auto;
       z-index: 99;
-      font-size: 16px;
-      font-family: inherit;
+      font-size: 12px;
     }
     .symbol-multiselect-list label {
       display: flex;
       align-items: center;
-      padding: 3px 14px;
+      padding: 2px 6px;
       cursor: pointer;
       white-space: nowrap;
-      transition: background 0.08s;
-      font-size: 16px;
-      font-family: inherit;
+      transition: background 0.07s;
+      font-size: 12px;
     }
-    .symbol-multiselect-list label:hover {
-      background: #f2f6ff;
-    }
-    .symbol-multiselect-list input[type=checkbox] {
-      margin-right: 8px;
-    }
-    /* Input, Select, and Button styling for consistency */
+    .symbol-multiselect-list label:hover { background: #f2f6ff; }
+    .symbol-multiselect-list input[type=checkbox] { margin-right: 5px; }
+    /* Compact controls */
     input[type="range"], input[type="number"], select, button, input[type="file"], label, input[type="checkbox"] {
-      font-size: 16px;
+      font-size: 12px;
       font-family: inherit;
+      padding: 2px 2px;
     }
   </style>
 </head>
