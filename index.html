@@ -2,56 +2,42 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Heatmap Viewer</title>
+  <title>Heatmap</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
     body { font-family: sans-serif; margin: 20px; }
-    .formula { font-style: italic; margin-bottom: 20px; }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 0;
-      margin-top: 0;
-    }
+    .formula { font-style: italic; margin-bottom: 18px; font-size: 1.22em; }
+    .main-flex { display: flex; justify-content: space-between; align-items: flex-start; }
     .controls { flex: 1; }
     .upload-box {
       border: 1px solid #ccc;
-      padding: 18px 18px 10px 18px;
+      padding: 16px 18px 12px 18px;
       border-radius: 10px;
-      min-width: 390px;
-      margin-top: 0;
-      box-sizing: border-box;
+      min-width: 410px;
+      max-width: 480px;
       background: #fff;
-      align-self: flex-start; /* aligns to top with the header */
+      box-sizing: border-box;
     }
     .control { margin-bottom: 12px; }
     label { font-weight: bold; margin-right: 8px; }
     input[type=range] { width: 250px; vertical-align: middle; }
     input[type=number] { width: 60px; margin-left: 8px; }
     #currentMaxH { margin-left: 12px; font-weight: bold; }
-    #edgeContainer { display: flex; align-items: flex-start; margin-top: 0;}
+    #edgeContainer { display: flex; align-items: flex-start; }
     #hoverY { width: 80px; text-align: right; margin-right: 8px; min-height: 60vh; line-height: 60vh; }
     #heatmap { flex: 1; height: 60vh; }
     #hoverX-container { display: flex; justify-content: center; margin-top: 8px; }
     #hoverX { font-style: italic; color: #333; }
     #otherSourceBox { width: 80px; font-size: 0.9em; margin-left: 6px; }
-
     #clearDataBtn { margin-left: 12px; padding: 2px 12px; border-radius: 6px; border: 1px solid #aaa; background: #fafafa; cursor: pointer; }
     #clearDataBtn:hover { background: #eee; }
-
-    .upload-label, .export-label {
-      font-weight: bold;
-      margin-right: 8px;
-      white-space: nowrap;
-    }
-    /* Card/table styling for CSV format */
+    /* CSV format card/table */
     .csv-card {
       background: #fafbfc;
       border: 1px solid #e1e4e8;
       border-radius: 6px;
       margin: 16px 0 10px 0;
-      padding: 14px;
+      padding: 12px;
     }
     .csv-table {
       border-collapse: collapse;
@@ -68,14 +54,24 @@
       font-weight: 600;
       background: #f6f8fa;
     }
-    .csv-success {
+    .csv-success, .csv-green {
       color: #008000;
       font-size: 0.98em;
       margin-top: 6px;
+      font-weight: 500;
+    }
+    .upload-export-row {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      margin-top: 8px;
+    }
+    .upload-label, .export-label {
+      font-weight: bold;
+      margin-right: 8px;
     }
     .file-btn {
-      display: inline-block;
-      padding: 3px 16px;
+      padding: 3px 20px;
       font-size: 1em;
       font-family: inherit;
       color: #222;
@@ -85,43 +81,32 @@
       box-sizing: border-box;
       cursor: pointer;
       margin-left: 0;
-      margin-top: 0;
-      margin-bottom: 0;
       transition: background 0.1s;
-      vertical-align: middle;
     }
     .file-btn:hover, .file-btn:focus {
       background: #e5e5e5;
       border-color: #888;
     }
-    .button-row {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-top: 0;
-      margin-bottom: 0;
-    }
+    /* Style for top row: dropdown + checkbox + green hint */
     .top-row {
       display: flex;
       align-items: center;
       gap: 18px;
-      margin-bottom: 3px;
+      margin-bottom: 4px;
     }
-    .green-tip {
+    .csv-green-hint {
       color: #008000;
-      font-size: 0.98em;
+      font-size: 1em;
       margin-left: 10px;
       font-weight: 500;
-      white-space: nowrap;
     }
   </style>
 </head>
 <body>
-  <h2 style="margin-bottom: 0;">Heatmap Viewer</h2>
-  <div class="formula" style="margin-top:0;">
+  <div class="formula">
     <strong>Metric:</strong> H = (AR – AR<sub>min</sub>) / max(MD, MD<sub>min</sub>) (decimal)
   </div>
-  <div class="header">
+  <div class="main-flex">
     <div class="controls">
       <div class="control" style="display: flex; align-items: center;">
         <label>Symbol:</label>
@@ -148,9 +133,8 @@
       </div>
     </div>
     <div class="upload-box">
-      <!-- Data Source, Decimal & Tip in one row -->
       <div class="top-row">
-        <label>Data Source:</label>
+        <label style="font-weight:bold;">Data Source:</label>
         <select id="dataSourceSelect">
           <option>Exxahub</option>
           <option>Testfol.io</option>
@@ -158,13 +142,11 @@
           <option>Quantmage</option>
           <option>Other</option>
         </select>
-        <label style="font-weight:normal; margin-left:10px; margin-right:2px;">
-          <input type="checkbox" id="decimalToPercentBox"> Decimal → %
-        </label>
-        <span class="green-tip">(select prior to upload)</span>
-        <input type="text" id="otherSourceBox" placeholder="Type here" style="display:none; margin-left:8px;" />
+        <input type="checkbox" id="decimalToPercentBox" style="margin-left:22px;">
+        <span style="font-weight:bold;">Decimal → %</span>
+        <span class="csv-green-hint">(select prior to upload)</span>
       </div>
-      <!-- Required CSV Format Card -->
+      <input type="text" id="otherSourceBox" placeholder="Type here" style="display:none; margin:8px 0 0 2px; width:80px;" />
       <div class="csv-card">
         <div style="font-weight: bold; margin-bottom: 8px;">Required CSV Format:</div>
         <table class="csv-table">
@@ -187,16 +169,15 @@
           &#10003; Use these exact headers (<b>column order doesn't matter</b>)
         </div>
       </div>
-      <!-- Upload & Export Row -->
-      <div class="button-row">
+      <div class="upload-export-row">
         <span class="upload-label">Upload CSV:</span>
         <input type="file" id="csvInput" accept=".csv">
-        <span class="export-label">Export CSV:</span>
+        <span class="export-label" style="margin-left:22px;">Export CSV:</span>
         <button id="exportCSVBtn" class="file-btn">Download Data</button>
       </div>
     </div>
   </div>
-  <div id="edgeContainer" style="margin-top: 10px;"><div id="hoverY"></div><div id="heatmap"></div></div>
+  <div id="edgeContainer"><div id="hoverY"></div><div id="heatmap"></div></div>
   <div id="hoverX-container"><div id="hoverX"></div></div>
   <script>
     let allData = {};
@@ -428,7 +409,7 @@
           hoverinfo: 'skip'
         }
       ], {
-        margin: { l: 60, r: 60, t: 60, b: 60 },
+        margin: { l: 60, r: 60, t: 30, b: 60 },
         xaxis: { title: 'RSI Threshold' },
         yaxis: { title: 'Lookback (days)' }
       }, { responsive: true });
