@@ -70,6 +70,27 @@
       font-size: 0.98em;
       margin-top: 6px;
     }
+    .file-btn {
+  display: inline-block;
+  padding: 3px 12px;
+  font-size: 1em;
+  font-family: inherit;
+  color: #222;
+  background: #f6f6f6;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  box-sizing: border-box;
+  cursor: pointer;
+  margin-left: 0;
+  margin-top: 2px;
+  margin-bottom: 0;
+  transition: background 0.1s;
+}
+.file-btn:hover, .file-btn:focus {
+  background: #e5e5e5;
+  border-color: #888;
+}
+
   </style>
 </head>
 <body>
@@ -150,7 +171,8 @@
       </div>
       <div class="control">
         <span class="export-label">Export CSV:</span>
-        <button id="exportCSVBtn" class="button-minimal">Download Data</button>
+       <button id="exportCSVBtn" class="file-btn">Download Data</button>
+
       </div>
     </div>
   </div>
