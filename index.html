@@ -260,7 +260,7 @@
       }));
     }
 
-    // --- Draw Heatmap Function with improved masking ---
+    // FULL DRAWHEATMAP FUNCTION
     function drawHeatmap() {
       const s = symbolSelect.value;
       if (!s) return;
@@ -272,15 +272,15 @@
       const zmaxVal = +zMax.value;
       const H = computeH(D.ar, D.md, floor, minMD);
 
-      // MD ceiling mask: at 0 mask everything, at 100 mask nothing, in between mask values >= slider.
+      // MD ceiling mask: at 0 mask everything, at 100 mask nothing, in between mask values above slider.
       const EPSILON = 1e-6;
       let mask;
       if (ceilMD <= EPSILON) {
-        mask = D.md.map(row => row.map(() => 1)); // fully mask
+        mask = D.md.map(row => row.map(() => 1));
       } else if (ceilMD >= 100 - EPSILON) {
-        mask = D.md.map(row => row.map(() => 0)); // mask nothing
+        mask = D.md.map(row => row.map(() => 0));
       } else {
-        mask = D.md.map(row => row.map(v => (v != null && v >= ceilMD) ? 1 : 0));
+        mask = D.md.map(row => row.map(v => (v != null && v > ceilMD) ? 1 : 0));
       }
 
       // Compute current max H
@@ -306,7 +306,7 @@
           y: D.y,
           type: 'heatmap',
           showscale: false,
-          colorscale: [[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0.85)']],
+          colorscale: [[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0.5)']],
           hoverinfo: 'skip'
         }
       ], {
