@@ -523,34 +523,57 @@ function drawHeatmaps() {
       }));
     }
 
-    // 8.11 EXPORT CSV LOGIC
-    exportCSVBtn.addEventListener('click', function() {
-      const floor = +arFloor.value;
-      const minMD = +mdMin.value;
-      const ceilMD = +mdCeil.value;
-      const hColName = `H (Rmin${floor}|Dmin${minMD}|Dmax${ceilMD})`;
-      let csv = `Symbol,Days,RSI,AR,MD,Calmar,${hColName}\n`;
-      selectedSymbols.forEach(symbol => {
-        const D = allData[symbol];
-        if (!D) return;
-        const H = computeH(D.ar, D.md, floor, minMD);
-        for (let i = 0; i < D.y.length; ++i) {
-          for (let j = 0; j < D.x.length; ++j) {
-            if (D.ar[i][j] == null) continue;
-            csv += [
-              `"${symbol}"`, D.y[i], D.x[j], D.ar[i][j], D.md[i][j],
-              (D.cm[i][j] == null ? "" : D.cm[i][j]), (H[i][j] == null ? "" : H[i][j].toFixed(5))
-            ].join(",") + "\n";
-          }
-        }
-      });
-      const blob = new Blob([csv], {type: "text/csv"});
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "merged_heatmap_data.csv";
-      document.body.appendChild(a); a.click();
-      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 0);
-    });
+   // 8.11 EXPORT CSV LOGIC
+exportCSVBtn.addEventListener('click', function() {
+  const floor = +arFloor.value;
+  const minMD = +mdMin.value;
+  const ceilMD = +mdCeil.value;
+  const hColName = `H (Rmin${floor}|Dmin${minMD}|Dmax${ceilMD})`;
+  let csv = `Symbol,Source,Days,RSI,AR,MD,Calmar,${hColName}\n`;
+  selectedSymbols.forEach(symbolSource => {
+    const match = symbolSource.match(/^(.*) \((.*)\)$/);
+    if (!match) return;
+    const symbol = match[1];
+    const source = match[2];
+    const rows = allData.filter(r => r.symbol === symbol && r.source === source);
+    // Get unique x/y
+    const xs = Array.from(new Set(rows.map(r => r.rsi))).sort((a, b) => +a - +b);
+    const ys = Array.from(new Set(rows.map(r => r.day))).sort((a, b) => +a - +b);
+    const arM = ys.map(y => xs.map(x => {
+      const rec = rows.find(r => r.day === y && r.rsi === x);
+      return rec ? rec.ar : null;
+    }));
+    const mdM = ys.map(y => xs.map(x => {
+      const rec = rows.find(r => r.day === y && r.rsi === x);
+      return rec ? rec.md : null;
+    }));
+    const cmM = ys.map(y => xs.map(x => {
+      const rec = rows.find(r => r.day === y && r.rsi === x);
+      return rec ? rec.cm : null;
+    }));
+    const H = computeH(arM, mdM, floor, minMD);
+    for (let i = 0; i < ys.length; ++i) {
+      for (let j = 0; j < xs.length; ++j) {
+        if (arM[i][j] == null) continue;
+        csv += [
+          `"${symbol}"`,
+          `"${source}"`,
+          ys[i], xs[j],
+          arM[i][j], mdM[i][j],
+          (cmM[i][j] == null ? "" : cmM[i][j]),
+          (H[i][j] == null ? "" : H[i][j].toFixed(5))
+        ].join(",") + "\n";
+      }
+    }
+  });
+  const blob = new Blob([csv], {type: "text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "merged_heatmap_data.csv";
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 0);
+});
+
 
    // 8.12 BUILD FROM TEXT FUNCTION (CSV Parsing and Data Merge)
 function buildFromText(text, defaultSource) {
