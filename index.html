@@ -361,7 +361,7 @@
     mdCeil.value = mdCeilNum.value = el.value; drawHeatmaps();
   });
 
-  // 5.10: Draw Heatmaps (with TickerNames)
+    // 5.10: Draw Heatmaps (with TickerNames BELOW Ticker)
   function drawHeatmaps() {
     heatmapsContainer.innerHTML = '';
     if (!selectedSymbols.length) {
@@ -415,15 +415,14 @@
       if (maxH > overallMaxH) overallMaxH = maxH;
       const section = document.createElement('div');
       section.className = 'heatmap-section';
-      // -- TickerName lookup
+      // -- TickerName lookup (NAME BELOW TICKER)
       const fundName = tickerNameMap[symbol] || "";
-      const annotationHTML = fundName
-        ? `<div style="font-size:11px; color:#2e4057; text-align:center; margin-bottom:-6px;">${fundName}</div>`
-        : "";
       section.innerHTML = `
         <div style="position:relative;">
-          ${annotationHTML}
           <div id="heatmap-${plotIdx}" style="height: 56vh;"></div>
+          ${fundName
+            ? `<div style="font-size:11px; color:#2e4057; text-align:center; margin-top:-2px; margin-bottom:16px;">${fundName}</div>`
+            : ""}
           <div class="colorbar-input-container" style="top: 2px;" id="colorbar-max-container-${plotIdx}">
             <span class="colorbar-label">Max H</span>
             <input type="number" step="0.01" value="${zmaxVal}" id="colorbar-max-${plotIdx}" class="colorbar-input">
@@ -505,6 +504,7 @@
     if (overallMaxH === -Infinity) currentMaxH.textContent = 'Current Max H: --';
     else currentMaxH.textContent = 'Current Max H: ' + overallMaxH.toFixed(3);
   }
+
 
   // 5.11: Compute H Function
   function computeH(ar, md, floor, minMD) {
