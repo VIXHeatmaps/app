@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <!-- 1. HEAD SECTION: Metadata, Title, Scripts, and Styles -->
   <meta charset="utf-8">
   <title>Heatmap Viewer</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <!-- 2. STYLE SECTION: All CSS Styling for the App -->
   <style>
     html, body { font-size: 12px; font-family: sans-serif; margin: 12px; }
     .header { display: flex; justify-content: space-between; align-items: flex-start; }
@@ -95,11 +97,15 @@
   </style>
 </head>
 <body>
+  <!-- 3. MAIN LAYOUT: App Flex Layout with Controls and Right Controls -->
   <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+    <!-- 4. CONTROLS AREA (LEFT PANEL): Inputs for metrics, sliders, symbol select -->
     <div class="controls">
+      <!-- 4.1 METRIC FORMULA DISPLAY -->
       <div style="font-size: 14px; font-style: italic; margin-bottom: 10px;">
         <b>Metric:</b> H = (AR – AR<sub>min</sub>) / max(MD, MD<sub>min</sub>) <span style="font-size: 11px;">(decimal)</span>
       </div>
+      <!-- 4.2 SYMBOL SELECTOR & CLEAR DATA BUTTON -->
       <div style="font-weight:bold; margin-bottom:6px;">
         Symbol:
         <div class="symbol-multiselect" id="symbolMultiSelectBox">
@@ -108,6 +114,7 @@
         </div>
         <button id="clearDataBtn" style="margin-left:8px;">Clear Data</button>
       </div>
+      <!-- 4.3 FILTER SLIDERS & INPUTS -->
       <div><b>AR Min. (%):</b>
         <input type="range" id="arFloor" min="0" max="100" step="0.1" value="3" style="width:110px;vertical-align:middle;">
         <input type="number" id="arFloorNum" min="0" max="100" step="0.1" value="3" style="width:35px;">
@@ -120,8 +127,10 @@
         <input type="range" id="mdCeil" min="0" max="100" step="0.1" value="50" style="width:110px;vertical-align:middle;">
         <input type="number" id="mdCeilNum" min="0" max="100" step="0.1" value="50" style="width:35px;">
       </div>
+      <!-- 4.4 CURRENT MAX H DISPLAY -->
       <span id="currentMaxH" class="currentMaxH-label">Current Max H: --</span>
     </div>
+    <!-- 5. RIGHT CONTROLS AREA: Data Source, File Upload, Export, etc. -->
     <div class="right-controls">
       <div class="rc-row">
         <label for="dataSourceSelect">Data Source:</label>
@@ -145,7 +154,7 @@
       <button id="exportCSVBtn" class="export-btn">Download Data</button>
     </div>
   </div>
-  <!-- CSV Modal -->
+  <!-- 6. CSV MODAL POPUP: Upload Template & Example Table -->
   <div id="csvModal">
     <div class="modal-content">
       <button id="closeModalBtn" title="Close">&times;</button>
@@ -161,10 +170,11 @@
       <div style="color: #008000; margin-top: 5px;">✓ (<b>column order doesn't matter</b>)</div>
     </div>
   </div>
-  <!-- Where heatmaps go -->
+  <!-- 7. HEATMAP CONTAINER: Where Heatmaps Render -->
   <div id="heatmapsContainer" style="margin-top:18px;"></div>
+  <!-- 8. JAVASCRIPT SECTION: All Interactivity, Plotting, Data Handling -->
   <script>
-    // ========== CSV MODAL LOGIC =============
+    // 8.1 CSV MODAL LOGIC (open/close modal, window click)
     document.getElementById('showCsvTemplate').onclick = function() {
       document.getElementById('csvModal').style.display = 'flex';
     };
@@ -177,11 +187,13 @@
       }
     };
 
+    // 8.2 GLOBAL STATE VARIABLES
     let allData = {};
     let rawText = null;
     let selectedSymbols = [];
     let allSymbolList = [];
 
+    // 8.3 DOM ELEMENT REFERENCES
     const csvInput = document.getElementById('csvInput'),
           arFloor = document.getElementById('arFloor'),
           arFloorNum = document.getElementById('arFloorNum'),
@@ -196,7 +208,7 @@
           heatmapsContainer = document.getElementById('heatmapsContainer'),
           currentMaxH = document.getElementById('currentMaxH');
 
-    // Custom multi-select
+    // 8.4 SYMBOL MULTISELECT LOGIC
     const symbolMultiSelectBox = document.getElementById('symbolMultiSelectBox');
     const symbolMultiSelectLabel = document.getElementById('symbolMultiSelectLabel');
     const symbolMultiSelectList = document.getElementById('symbolMultiSelectList');
@@ -260,6 +272,7 @@
       else symbolMultiSelectLabel.innerText = `${selectedSymbols.length} symbols`;
     }
 
+    // 8.5 CLEAR DATA BUTTON
     clearDataBtn.addEventListener('click', () => {
       allData = {}; selectedSymbols = []; allSymbolList = [];
       symbolMultiSelectList.innerHTML = '';
@@ -268,7 +281,7 @@
       currentMaxH.textContent = 'Current Max H: --';
     });
 
-    // AUTOLOAD CSV ON PAGE LOAD
+    // 8.6 AUTOLOAD CSV ON PAGE LOAD
     window.addEventListener('DOMContentLoaded', () => {
       fetch('data/LoadDataTQQQ.csv')
         .then(response => {
@@ -285,6 +298,7 @@
         });
     });
 
+    // 8.7 CSV FILE INPUT HANDLER
     csvInput.addEventListener('change', e => {
       const reader = new FileReader();
       reader.onload = evt => {
@@ -296,7 +310,7 @@
       reader.readAsText(e.target.files[0]);
     });
 
-    // Sync controls
+    // 8.8 SLIDER & INPUT CONTROLS SYNC
     [arFloor, arFloorNum].forEach(el => el.oninput = () => {
       arFloor.value = arFloorNum.value = el.value; drawHeatmaps();
     });
@@ -307,7 +321,7 @@
       mdCeil.value = mdCeilNum.value = el.value; drawHeatmaps();
     });
 
-    // For each plot, we create unique colorbar Min/Max input fields overlayed at top/bottom of the colorbar
+    // 8.9 DRAW HEATMAPS LOGIC
     function drawHeatmaps() {
       heatmapsContainer.innerHTML = '';
       if (!selectedSymbols.length) {
@@ -446,6 +460,7 @@
       else currentMaxH.textContent = 'Current Max H: ' + overallMaxH.toFixed(3);
     }
 
+    // 8.10 COMPUTE H FUNCTION
     function computeH(ar, md, floor, minMD) {
       return ar.map((row, i) => row.map((v, j) => {
         if (v == null) return null;
@@ -453,7 +468,7 @@
       }));
     }
 
-    // CSV Export for ALL selected
+    // 8.11 EXPORT CSV LOGIC
     exportCSVBtn.addEventListener('click', function() {
       const floor = +arFloor.value;
       const minMD = +mdMin.value;
@@ -482,7 +497,7 @@
       setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 0);
     });
 
-    // ==================
+    // 8.12 BUILD FROM TEXT FUNCTION (CSV Parsing and Data Merge)
     function buildFromText(text, source) {
       const lines = text.trim().split(/\r?\n/);
       if (!lines.length) return;
