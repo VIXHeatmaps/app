@@ -361,149 +361,170 @@
     mdCeil.value = mdCeilNum.value = el.value; drawHeatmaps();
   });
 
-    // 5.10: Draw Heatmaps (with TickerNames BELOW Ticker)
-  function drawHeatmaps() {
-    heatmapsContainer.innerHTML = '';
-    if (!selectedSymbols.length) {
-      currentMaxH.textContent = 'Current Max H: --';
-      const msg = document.createElement('div');
-      msg.style.textAlign = 'center';
-      msg.style.margin = '30px 0 30px 0';
-      msg.style.color = '#666';
-      msg.style.fontSize = '1.10em';
-      msg.innerHTML = 'Select one or more symbols above to view heatmaps.';
-      heatmapsContainer.appendChild(msg);
-      return;
-    }
-    let overallMaxH = -Infinity;
-    selectedSymbols.forEach((symbolSource, plotIdx) => {
-      const match = symbolSource.match(/^(.*) \((.*)\)$/);
-      if (!match) return;
-      const symbol = match[1];
-      const source = match[2];
-      const rows = window.allData.filter(r => r.symbol === symbol && r.source === source);
-      if (!rows.length) return;
-      const xs = Array.from(new Set(rows.map(r => r.rsi))).sort((a, b) => +a - +b);
-      const ys = Array.from(new Set(rows.map(r => r.day))).sort((a, b) => +a - +b);
-      const arM = ys.map(y => xs.map(x => {
-        const rec = rows.find(r => r.day === y && r.rsi === x);
-        return rec ? rec.ar : null;
-      }));
-      const mdM = ys.map(y => xs.map(x => {
-        const rec = rows.find(r => r.day === y && r.rsi === x);
-        return rec ? rec.md : null;
-      }));
-      const cmM = ys.map(y => xs.map(x => {
-        const rec = rows.find(r => r.day === y && r.rsi === x);
-        return rec ? rec.cm : null;
-      }));
-      const floor = +arFloor.value;
-      const minMD = +mdMin.value;
-      const ceilMD = +mdCeil.value;
-      const colorbarMinKey = "colorbarMin-" + plotIdx;
-      const colorbarMaxKey = "colorbarMax-" + plotIdx;
-      let zminVal = window[colorbarMinKey] !== undefined ? window[colorbarMinKey] : -1;
-      let zmaxVal = window[colorbarMaxKey] !== undefined ? window[colorbarMaxKey] : 1;
-      const H = computeH(arM, mdM, floor, minMD);
-      const EPSILON = 1e-6;
-      let mask;
-      if (ceilMD <= EPSILON) mask = mdM.map(row => row.map(() => 1));
-      else if (ceilMD >= 100 - EPSILON) mask = mdM.map(row => row.map(() => 0));
-      else mask = mdM.map(row => row.map(v => (v != null && v > ceilMD) ? 1 : 0));
-      let maxH = -Infinity;
-      H.forEach(row => row.forEach(v => { if (v != null && v > maxH) maxH = v; }));
-      if (maxH > overallMaxH) overallMaxH = maxH;
-      const section = document.createElement('div');
-      section.className = 'heatmap-section';
-      // -- TickerName lookup (NAME BELOW TICKER)
-      const fundName = tickerNameMap[symbol] || "";
-      section.innerHTML = `
-        <div style="position:relative;">
-          <div id="heatmap-${plotIdx}" style="height: 56vh;"></div>
-          ${fundName
-            ? `<div style="font-size:11px; color:#2e4057; text-align:center; margin-top:-2px; margin-bottom:16px;">${fundName}</div>`
-            : ""}
-          <div class="colorbar-input-container" style="top: 2px;" id="colorbar-max-container-${plotIdx}">
-            <span class="colorbar-label">Max H</span>
-            <input type="number" step="0.01" value="${zmaxVal}" id="colorbar-max-${plotIdx}" class="colorbar-input">
-          </div>
-          <div class="colorbar-input-container" style="bottom: 16px; top:unset;" id="colorbar-min-container-${plotIdx}">
-            <span class="colorbar-label">Min H</span>
-            <input type="number" step="0.01" value="${zminVal}" id="colorbar-min-${plotIdx}" class="colorbar-input">
-          </div>
-        </div>
-        <div style="display: flex; justify-content: space-between; font-size: 0.97em; margin-top:2px;">
-          <span id="hoverX-${plotIdx}"></span>
-          <span id="hoverY-${plotIdx}"></span>
-        </div>`;
-      heatmapsContainer.appendChild(section);
-      const heatDiv = section.querySelector(`#heatmap-${plotIdx}`);
-      Plotly.newPlot(heatDiv, [
-        {
-          z: H, x: xs, y: ys, type: 'heatmap',
-          colorscale: [[0, 'green'], [0.5, 'yellow'], [1, 'red']],
-          zmin: zminVal, zmax: zmaxVal,
-          colorbar: {
-            thickness: 15, len: 0.92, x: 1.01, y: 0.5, tickfont: {size: 12}
-          },
-          customdata: arM.map((r, i) => r.map((_, j) => [arM[i][j], mdM[i][j], cmM[i][j], H[i][j]])),
-          hovertemplate: 'AR: %{customdata[0]:.2f}%<br>MD: %{customdata[1]:.2f}%<br>Calmar: %{customdata[2]:.2f}<br>H: %{customdata[3]:.3f}<extra></extra>'
-        },
-        {
-          z: mask, x: xs, y: ys, type: 'heatmap', showscale: false,
-          colorscale: [[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0.45)']], hoverinfo: 'skip'
-        }
-      ], {
-        margin: { l: 45, r: 65, t: 110, b: 45 },
-        xaxis: { title: 'RSI Threshold', tickfont: {size:12}, titlefont:{size:12} },
-        yaxis: { title: 'Lookback (days)', tickfont: {size:12}, titlefont:{size:12} },
-        annotations: [
-          {
-            text: symbolSource,
-            xref: 'paper',
-            yref: 'paper',
-            x: 0.5,
-            y: 1.16,
-            xanchor: 'center',
-            yanchor: 'bottom',
-            showarrow: false,
-            font: {
-              size: 16,
-              family: 'sans-serif',
-              color: '#1b365d'
-            }
-          }
-        ]
-      }, { responsive: true });
-
-      setTimeout(() => {
-        const minInput = document.getElementById(`colorbar-min-${plotIdx}`);
-        const maxInput = document.getElementById(`colorbar-max-${plotIdx}`);
-        minInput.onchange = function() {
-          window[colorbarMinKey] = Number(minInput.value);
-          drawHeatmaps();
-        };
-        maxInput.onchange = function() {
-          window[colorbarMaxKey] = Number(maxInput.value);
-          drawHeatmaps();
-        };
-      }, 0);
-
-      const hoverX = section.querySelector(`#hoverX-${plotIdx}`);
-      const hoverY = section.querySelector(`#hoverY-${plotIdx}`);
-      heatDiv.on('plotly_hover', function(eventData) {
-        var pt = eventData.points[0];
-        hoverX.innerText = 'RSI: ' + pt.x;
-        hoverY.innerText = 'Day: ' + pt.y;
-      });
-      heatDiv.on('plotly_unhover', function() {
-        hoverX.innerText = '';
-        hoverY.innerText = '';
-      });
-    });
-    if (overallMaxH === -Infinity) currentMaxH.textContent = 'Current Max H: --';
-    else currentMaxH.textContent = 'Current Max H: ' + overallMaxH.toFixed(3);
+   // 5.10: Draw Heatmaps (with fund name as annotation BELOW Ticker)
+function drawHeatmaps() {
+  heatmapsContainer.innerHTML = '';
+  if (!selectedSymbols.length) {
+    currentMaxH.textContent = 'Current Max H: --';
+    const msg = document.createElement('div');
+    msg.style.textAlign = 'center';
+    msg.style.margin = '30px 0 30px 0';
+    msg.style.color = '#666';
+    msg.style.fontSize = '1.10em';
+    msg.innerHTML = 'Select one or more symbols above to view heatmaps.';
+    heatmapsContainer.appendChild(msg);
+    return;
   }
+  let overallMaxH = -Infinity;
+  selectedSymbols.forEach((symbolSource, plotIdx) => {
+    const match = symbolSource.match(/^(.*) \((.*)\)$/);
+    if (!match) return;
+    const symbol = match[1];
+    const source = match[2];
+    const rows = window.allData.filter(r => r.symbol === symbol && r.source === source);
+    if (!rows.length) return;
+    const xs = Array.from(new Set(rows.map(r => r.rsi))).sort((a, b) => +a - +b);
+    const ys = Array.from(new Set(rows.map(r => r.day))).sort((a, b) => +a - +b);
+    const arM = ys.map(y => xs.map(x => {
+      const rec = rows.find(r => r.day === y && r.rsi === x);
+      return rec ? rec.ar : null;
+    }));
+    const mdM = ys.map(y => xs.map(x => {
+      const rec = rows.find(r => r.day === y && r.rsi === x);
+      return rec ? rec.md : null;
+    }));
+    const cmM = ys.map(y => xs.map(x => {
+      const rec = rows.find(r => r.day === y && r.rsi === x);
+      return rec ? rec.cm : null;
+    }));
+    const floor = +arFloor.value;
+    const minMD = +mdMin.value;
+    const ceilMD = +mdCeil.value;
+    const colorbarMinKey = "colorbarMin-" + plotIdx;
+    const colorbarMaxKey = "colorbarMax-" + plotIdx;
+    let zminVal = window[colorbarMinKey] !== undefined ? window[colorbarMinKey] : -1;
+    let zmaxVal = window[colorbarMaxKey] !== undefined ? window[colorbarMaxKey] : 1;
+    const H = computeH(arM, mdM, floor, minMD);
+    const EPSILON = 1e-6;
+    let mask;
+    if (ceilMD <= EPSILON) mask = mdM.map(row => row.map(() => 1));
+    else if (ceilMD >= 100 - EPSILON) mask = mdM.map(row => row.map(() => 0));
+    else mask = mdM.map(row => row.map(v => (v != null && v > ceilMD) ? 1 : 0));
+    let maxH = -Infinity;
+    H.forEach(row => row.forEach(v => { if (v != null && v > maxH) maxH = v; }));
+    if (maxH > overallMaxH) overallMaxH = maxH;
+    const section = document.createElement('div');
+    section.className = 'heatmap-section';
+
+    // ---- Fund Name for annotation
+    const fundName = tickerNameMap[symbol] || "";
+
+    section.innerHTML = `
+      <div style="position:relative;">
+        <div id="heatmap-${plotIdx}" style="height: 56vh;"></div>
+        <div class="colorbar-input-container" style="top: 2px;" id="colorbar-max-container-${plotIdx}">
+          <span class="colorbar-label">Max H</span>
+          <input type="number" step="0.01" value="${zmaxVal}" id="colorbar-max-${plotIdx}" class="colorbar-input">
+        </div>
+        <div class="colorbar-input-container" style="bottom: 16px; top:unset;" id="colorbar-min-container-${plotIdx}">
+          <span class="colorbar-label">Min H</span>
+          <input type="number" step="0.01" value="${zminVal}" id="colorbar-min-${plotIdx}" class="colorbar-input">
+        </div>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 0.97em; margin-top:2px;">
+        <span id="hoverX-${plotIdx}"></span>
+        <span id="hoverY-${plotIdx}"></span>
+      </div>`;
+    heatmapsContainer.appendChild(section);
+    const heatDiv = section.querySelector(`#heatmap-${plotIdx}`);
+
+    // Add two annotations: ticker (big), then fund name (small, just below)
+    let annotations = [
+      {
+        text: symbolSource,
+        xref: 'paper',
+        yref: 'paper',
+        x: 0.5,
+        y: 1.16,
+        xanchor: 'center',
+        yanchor: 'bottom',
+        showarrow: false,
+        font: {
+          size: 16,
+          family: 'sans-serif',
+          color: '#1b365d'
+        }
+      }
+    ];
+    if (fundName) {
+      annotations.push({
+        text: fundName,
+        xref: 'paper',
+        yref: 'paper',
+        x: 0.5,
+        y: 1.12, // Just below the main annotation
+        xanchor: 'center',
+        yanchor: 'bottom',
+        showarrow: false,
+        font: {
+          size: 12,
+          family: 'sans-serif',
+          color: '#2e4057'
+        }
+      });
+    }
+
+    Plotly.newPlot(heatDiv, [
+      {
+        z: H, x: xs, y: ys, type: 'heatmap',
+        colorscale: [[0, 'green'], [0.5, 'yellow'], [1, 'red']],
+        zmin: zminVal, zmax: zmaxVal,
+        colorbar: {
+          thickness: 15, len: 0.92, x: 1.01, y: 0.5, tickfont: {size: 12}
+        },
+        customdata: arM.map((r, i) => r.map((_, j) => [arM[i][j], mdM[i][j], cmM[i][j], H[i][j]])),
+        hovertemplate: 'AR: %{customdata[0]:.2f}%<br>MD: %{customdata[1]:.2f}%<br>Calmar: %{customdata[2]:.2f}<br>H: %{customdata[3]:.3f}<extra></extra>'
+      },
+      {
+        z: mask, x: xs, y: ys, type: 'heatmap', showscale: false,
+        colorscale: [[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0.45)']], hoverinfo: 'skip'
+      }
+    ], {
+      margin: { l: 45, r: 65, t: 120, b: 45 },
+      xaxis: { title: 'RSI Threshold', tickfont: {size:12}, titlefont:{size:12} },
+      yaxis: { title: 'Lookback (days)', tickfont: {size:12}, titlefont:{size:12} },
+      annotations
+    }, { responsive: true });
+
+    setTimeout(() => {
+      const minInput = document.getElementById(`colorbar-min-${plotIdx}`);
+      const maxInput = document.getElementById(`colorbar-max-${plotIdx}`);
+      minInput.onchange = function() {
+        window[colorbarMinKey] = Number(minInput.value);
+        drawHeatmaps();
+      };
+      maxInput.onchange = function() {
+        window[colorbarMaxKey] = Number(maxInput.value);
+        drawHeatmaps();
+      };
+    }, 0);
+
+    const hoverX = section.querySelector(`#hoverX-${plotIdx}`);
+    const hoverY = section.querySelector(`#hoverY-${plotIdx}`);
+    heatDiv.on('plotly_hover', function(eventData) {
+      var pt = eventData.points[0];
+      hoverX.innerText = 'RSI: ' + pt.x;
+      hoverY.innerText = 'Day: ' + pt.y;
+    });
+    heatDiv.on('plotly_unhover', function() {
+      hoverX.innerText = '';
+      hoverY.innerText = '';
+    });
+  });
+  if (overallMaxH === -Infinity) currentMaxH.textContent = 'Current Max H: --';
+  else currentMaxH.textContent = 'Current Max H: ' + overallMaxH.toFixed(3);
+}
+
 
 
   // 5.11: Compute H Function
