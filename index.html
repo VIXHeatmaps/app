@@ -162,433 +162,458 @@
   <!-- End Chapter 4 -->
 
   <!-- Chapter 5: MAIN SCRIPT -->
-  <script>
-    // 5.1: CSV Modal Logic
-    document.getElementById('showCsvTemplate').onclick = function() {
-      document.getElementById('csvModal').style.display = 'flex';
-    };
-    document.getElementById('closeModalBtn').onclick = function() {
+<script>
+  // 5.1: CSV Modal Logic
+  document.getElementById('showCsvTemplate').onclick = function() {
+    document.getElementById('csvModal').style.display = 'flex';
+  };
+  document.getElementById('closeModalBtn').onclick = function() {
+    document.getElementById('csvModal').style.display = 'none';
+  };
+  window.onclick = function(event) {
+    if (event.target === document.getElementById('csvModal')) {
       document.getElementById('csvModal').style.display = 'none';
-    };
-    window.onclick = function(event) {
-      if (event.target === document.getElementById('csvModal')) {
-        document.getElementById('csvModal').style.display = 'none';
-      }
-    };
-
-    // 5.2: GLOBAL STATE
-    window.allData = [];
-    let rawText = null;
-    let selectedSymbols = [];
-    let allSymbolList = [];
-
-    // 5.3: DOM References
-    const csvInput = document.getElementById('csvInput'),
-          arFloor = document.getElementById('arFloor'),
-          arFloorNum = document.getElementById('arFloorNum'),
-          mdMin = document.getElementById('mdMin'),
-          mdMinNum = document.getElementById('mdMinNum'),
-          mdCeil = document.getElementById('mdCeil'),
-          mdCeilNum = document.getElementById('mdCeilNum'),
-          dataSourceSelect = document.getElementById('dataSourceSelect'),
-          clearDataBtn = document.getElementById('clearDataBtn'),
-          decimalToPercentBox = document.getElementById('decimalToPercentBox'),
-          exportCSVBtn = document.getElementById('exportCSVBtn'),
-          heatmapsContainer = document.getElementById('heatmapsContainer'),
-          currentMaxH = document.getElementById('currentMaxH');
-
-    // 5.4: Symbol Multiselect Logic
-    const symbolMultiSelectBox = document.getElementById('symbolMultiSelectBox');
-    const symbolMultiSelectLabel = document.getElementById('symbolMultiSelectLabel');
-    const symbolMultiSelectList = document.getElementById('symbolMultiSelectList');
-
-    function getUniqueSymbolSources() {
-      if (!Array.isArray(window.allData)) return [];
-      const seen = new Set();
-      const combos = [];
-      window.allData.forEach(row => {
-        const key = `${row.symbol} (${row.source})`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          combos.push(key);
-        }
-      });
-      return combos;
     }
+  };
 
-    function populateSymbols() {
-      allSymbolList = getUniqueSymbolSources();
-      selectedSymbols = [];
-      symbolMultiSelectList.innerHTML = '';
-      allSymbolList.forEach((sym, idx) => {
-        const id = `multisym-${idx}`;
-        const label = document.createElement('label');
-        label.innerHTML = `<input type="checkbox" id="${id}" value="${sym}"> ${sym}`;
-        symbolMultiSelectList.appendChild(label);
-      });
-      // Auto-select first symbol and update UI
-      if (allSymbolList.length) {
-        selectedSymbols = [allSymbolList[0]];
-        symbolMultiSelectList.querySelector('input').checked = true;
-        updateSymbolLabel();
-        drawHeatmaps();
-      } else {
-        updateSymbolLabel();
-        drawHeatmaps();
-      }
-    }
+  // 5.2: GLOBAL STATE
+  window.allData = [];
+  let rawText = null;
+  let selectedSymbols = [];
+  let allSymbolList = [];
+  let tickerNameMap = {}; // Symbol -> Fund Name
 
-    function openSymbolList() {
-      symbolMultiSelectList.style.display = 'block';
-      symbolMultiSelectBox.classList.add('open');
-      symbolMultiSelectLabel.focus();
-    }
-    function closeSymbolList() {
-      symbolMultiSelectList.style.display = 'none';
-      symbolMultiSelectBox.classList.remove('open');
-    }
-    symbolMultiSelectLabel.onclick = () => {
-      if (symbolMultiSelectList.style.display === 'block') closeSymbolList();
-      else openSymbolList();
-    };
-    symbolMultiSelectLabel.onkeydown = (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault(); openSymbolList();
+  // 5.3: DOM References
+  const csvInput = document.getElementById('csvInput'),
+        arFloor = document.getElementById('arFloor'),
+        arFloorNum = document.getElementById('arFloorNum'),
+        mdMin = document.getElementById('mdMin'),
+        mdMinNum = document.getElementById('mdMinNum'),
+        mdCeil = document.getElementById('mdCeil'),
+        mdCeilNum = document.getElementById('mdCeilNum'),
+        dataSourceSelect = document.getElementById('dataSourceSelect'),
+        clearDataBtn = document.getElementById('clearDataBtn'),
+        decimalToPercentBox = document.getElementById('decimalToPercentBox'),
+        exportCSVBtn = document.getElementById('exportCSVBtn'),
+        heatmapsContainer = document.getElementById('heatmapsContainer'),
+        currentMaxH = document.getElementById('currentMaxH');
+
+  // 5.4: Symbol Multiselect Logic
+  const symbolMultiSelectBox = document.getElementById('symbolMultiSelectBox');
+  const symbolMultiSelectLabel = document.getElementById('symbolMultiSelectLabel');
+  const symbolMultiSelectList = document.getElementById('symbolMultiSelectList');
+
+  function getUniqueSymbolSources() {
+    if (!Array.isArray(window.allData)) return [];
+    const seen = new Set();
+    const combos = [];
+    window.allData.forEach(row => {
+      const key = `${row.symbol} (${row.source})`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        combos.push(key);
       }
-    };
-    symbolMultiSelectList.onclick = (e) => {
-      if (e.target.tagName === "INPUT") {
-        const sym = e.target.value;
-        if (e.target.checked) {
-          if (!selectedSymbols.includes(sym)) selectedSymbols.push(sym);
-        } else {
-          selectedSymbols = selectedSymbols.filter(s => s !== sym);
-        }
-        updateSymbolLabel(); drawHeatmaps();
-      }
-    };
-    document.addEventListener('mousedown', (e) => {
-      if (!symbolMultiSelectBox.contains(e.target)) closeSymbolList();
     });
-    function updateSymbolLabel() {
-      if (selectedSymbols.length === 0) symbolMultiSelectLabel.innerText = "Select Symbol";
-      else if (selectedSymbols.length === 1) symbolMultiSelectLabel.innerText = selectedSymbols[0];
-      else symbolMultiSelectLabel.innerText = `${selectedSymbols.length} symbols`;
-    }
+    return combos;
+  }
 
-    // 5.5: Clear Data
-    clearDataBtn.addEventListener('click', () => {
-      window.allData = [];
-      selectedSymbols = [];
-      allSymbolList = [];
-      symbolMultiSelectList.innerHTML = '';
+  function populateSymbols() {
+    allSymbolList = getUniqueSymbolSources();
+    selectedSymbols = [];
+    symbolMultiSelectList.innerHTML = '';
+    allSymbolList.forEach((sym, idx) => {
+      const id = `multisym-${idx}`;
+      const label = document.createElement('label');
+      label.innerHTML = `<input type="checkbox" id="${id}" value="${sym}"> ${sym}`;
+      symbolMultiSelectList.appendChild(label);
+    });
+    // Auto-select first symbol and update UI
+    if (allSymbolList.length) {
+      selectedSymbols = [allSymbolList[0]];
+      symbolMultiSelectList.querySelector('input').checked = true;
       updateSymbolLabel();
-      heatmapsContainer.innerHTML = '';
-      currentMaxH.textContent = 'Current Max H: --';
-    });
+      drawHeatmaps();
+    } else {
+      updateSymbolLabel();
+      drawHeatmaps();
+    }
+  }
 
-    // 5.6: Autoload CSV on Page Load
-    window.addEventListener('DOMContentLoaded', () => {
-      let filesToFetch = [];
-      for (let i = 1; i <= 20; i++) {
-        filesToFetch.push(`data/LoadData${i}.csv`);
+  function openSymbolList() {
+    symbolMultiSelectList.style.display = 'block';
+    symbolMultiSelectBox.classList.add('open');
+    symbolMultiSelectLabel.focus();
+  }
+  function closeSymbolList() {
+    symbolMultiSelectList.style.display = 'none';
+    symbolMultiSelectBox.classList.remove('open');
+  }
+  symbolMultiSelectLabel.onclick = () => {
+    if (symbolMultiSelectList.style.display === 'block') closeSymbolList();
+    else openSymbolList();
+  };
+  symbolMultiSelectLabel.onkeydown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault(); openSymbolList();
+    }
+  };
+  symbolMultiSelectList.onclick = (e) => {
+    if (e.target.tagName === "INPUT") {
+      const sym = e.target.value;
+      if (e.target.checked) {
+        if (!selectedSymbols.includes(sym)) selectedSymbols.push(sym);
+      } else {
+        selectedSymbols = selectedSymbols.filter(s => s !== sym);
       }
-      let filesLoaded = 0;
-      let atLeastOneLoaded = false;
-      filesToFetch.forEach((filename) => {
-        fetch(filename)
-          .then(response => {
-            if (!response.ok) throw new Error('Network response was not ok');
-            return response.text();
-          })
-          .then(csvText => {
-            atLeastOneLoaded = true;
-            let shortName = filename.replace(/^data\/|\.csv$/g, '');
-            buildFromText(csvText, shortName);
-          })
-          .catch(error => {
-            // Ignore errors (file missing)
-          })
-          .finally(() => {
-            filesLoaded++;
-            if (filesLoaded === filesToFetch.length) {
-              if (atLeastOneLoaded) {
-                populateSymbols();
-              }
-            }
-          });
+      updateSymbolLabel(); drawHeatmaps();
+    }
+  };
+  document.addEventListener('mousedown', (e) => {
+    if (!symbolMultiSelectBox.contains(e.target)) closeSymbolList();
+  });
+  function updateSymbolLabel() {
+    if (selectedSymbols.length === 0) symbolMultiSelectLabel.innerText = "Select Symbol";
+    else if (selectedSymbols.length === 1) symbolMultiSelectLabel.innerText = selectedSymbols[0];
+    else symbolMultiSelectLabel.innerText = `${selectedSymbols.length} symbols`;
+  }
+
+  // 5.5: Clear Data
+  clearDataBtn.addEventListener('click', () => {
+    window.allData = [];
+    selectedSymbols = [];
+    allSymbolList = [];
+    symbolMultiSelectList.innerHTML = '';
+    updateSymbolLabel();
+    heatmapsContainer.innerHTML = '';
+    currentMaxH.textContent = 'Current Max H: --';
+  });
+
+  // 5.6: Load TickerNames.csv on page load
+  async function loadTickerNames() {
+    try {
+      const resp = await fetch('data/TickerNames.csv');
+      if (!resp.ok) throw new Error('TickerNames.csv not found');
+      const csv = await resp.text();
+      csv.split(/\r?\n/).forEach((line, i) => {
+        if (!line.trim() || i === 0) return; // skip header or blank
+        const [symbol, name] = line.split(',');
+        if (symbol && name) tickerNameMap[symbol.trim()] = name.trim();
       });
-    });
+    } catch (e) {
+      tickerNameMap = {};
+    }
+  }
 
-    // 5.7: CSV File Input Handler
-    csvInput.addEventListener('change', e => {
-      const reader = new FileReader();
-      reader.onload = evt => {
-        rawText = evt.target.result;
-        let source = dataSourceSelect.value;
-        buildFromText(rawText, source);
-        populateSymbols();
-      };
-      reader.readAsText(e.target.files[0]);
-    });
-
-    // 5.8: Slider/Input Sync
-    [arFloor, arFloorNum].forEach(el => el.oninput = () => {
-      arFloor.value = arFloorNum.value = el.value; drawHeatmaps();
-    });
-    [mdMin, mdMinNum].forEach(el => el.oninput = () => {
-      mdMin.value = mdMinNum.value = el.value; drawHeatmaps();
-    });
-    [mdCeil, mdCeilNum].forEach(el => el.oninput = () => {
-      mdCeil.value = mdCeilNum.value = el.value; drawHeatmaps();
-    });
-
-    // 5.9: Draw Heatmaps
-    function drawHeatmaps() {
-      heatmapsContainer.innerHTML = '';
-      if (!selectedSymbols.length) {
-        currentMaxH.textContent = 'Current Max H: --';
-        const msg = document.createElement('div');
-        msg.style.textAlign = 'center';
-        msg.style.margin = '30px 0 30px 0';
-        msg.style.color = '#666';
-        msg.style.fontSize = '1.10em';
-        msg.innerHTML = 'Select one or more symbols above to view heatmaps.';
-        heatmapsContainer.appendChild(msg);
-        return;
-      }
-      let overallMaxH = -Infinity;
-      selectedSymbols.forEach((symbolSource, plotIdx) => {
-        const match = symbolSource.match(/^(.*) \((.*)\)$/);
-        if (!match) return;
-        const symbol = match[1];
-        const source = match[2];
-        const rows = window.allData.filter(r => r.symbol === symbol && r.source === source);
-        if (!rows.length) return;
-        const xs = Array.from(new Set(rows.map(r => r.rsi))).sort((a, b) => +a - +b);
-        const ys = Array.from(new Set(rows.map(r => r.day))).sort((a, b) => +a - +b);
-        const arM = ys.map(y => xs.map(x => {
-          const rec = rows.find(r => r.day === y && r.rsi === x);
-          return rec ? rec.ar : null;
-        }));
-        const mdM = ys.map(y => xs.map(x => {
-          const rec = rows.find(r => r.day === y && r.rsi === x);
-          return rec ? rec.md : null;
-        }));
-        const cmM = ys.map(y => xs.map(x => {
-          const rec = rows.find(r => r.day === y && r.rsi === x);
-          return rec ? rec.cm : null;
-        }));
-        const floor = +arFloor.value;
-        const minMD = +mdMin.value;
-        const ceilMD = +mdCeil.value;
-        const colorbarMinKey = "colorbarMin-" + plotIdx;
-        const colorbarMaxKey = "colorbarMax-" + plotIdx;
-        let zminVal = window[colorbarMinKey] !== undefined ? window[colorbarMinKey] : -1;
-        let zmaxVal = window[colorbarMaxKey] !== undefined ? window[colorbarMaxKey] : 1;
-        const H = computeH(arM, mdM, floor, minMD);
-        const EPSILON = 1e-6;
-        let mask;
-        if (ceilMD <= EPSILON) mask = mdM.map(row => row.map(() => 1));
-        else if (ceilMD >= 100 - EPSILON) mask = mdM.map(row => row.map(() => 0));
-        else mask = mdM.map(row => row.map(v => (v != null && v > ceilMD) ? 1 : 0));
-        let maxH = -Infinity;
-        H.forEach(row => row.forEach(v => { if (v != null && v > maxH) maxH = v; }));
-        if (maxH > overallMaxH) overallMaxH = maxH;
-        const section = document.createElement('div');
-        section.className = 'heatmap-section';
-        section.innerHTML = `
-          <div style="position:relative;">
-            <div id="heatmap-${plotIdx}" style="height: 56vh;"></div>
-            <div class="colorbar-input-container" style="top: 2px;" id="colorbar-max-container-${plotIdx}">
-              <span class="colorbar-label">Max H</span>
-              <input type="number" step="0.01" value="${zmaxVal}" id="colorbar-max-${plotIdx}" class="colorbar-input">
-            </div>
-            <div class="colorbar-input-container" style="bottom: 16px; top:unset;" id="colorbar-min-container-${plotIdx}">
-              <span class="colorbar-label">Min H</span>
-              <input type="number" step="0.01" value="${zminVal}" id="colorbar-min-${plotIdx}" class="colorbar-input">
-            </div>
-          </div>
-          <div style="display: flex; justify-content: space-between; font-size: 0.97em; margin-top:2px;">
-            <span id="hoverX-${plotIdx}"></span>
-            <span id="hoverY-${plotIdx}"></span>
-          </div>`;
-        heatmapsContainer.appendChild(section);
-        const heatDiv = section.querySelector(`#heatmap-${plotIdx}`);
-        Plotly.newPlot(heatDiv, [
-          {
-            z: H, x: xs, y: ys, type: 'heatmap',
-            colorscale: [[0, 'green'], [0.5, 'yellow'], [1, 'red']],
-            zmin: zminVal, zmax: zmaxVal,
-            colorbar: {
-              thickness: 15, len: 0.92, x: 1.01, y: 0.5, tickfont: {size: 12}
-            },
-            customdata: arM.map((r, i) => r.map((_, j) => [arM[i][j], mdM[i][j], cmM[i][j], H[i][j]])),
-            hovertemplate: 'AR: %{customdata[0]:.2f}%<br>MD: %{customdata[1]:.2f}%<br>Calmar: %{customdata[2]:.2f}<br>H: %{customdata[3]:.3f}<extra></extra>'
-          },
-          {
-            z: mask, x: xs, y: ys, type: 'heatmap', showscale: false,
-            colorscale: [[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0.45)']], hoverinfo: 'skip'
+  // 5.7: Autoload CSV on Page Load
+  window.addEventListener('DOMContentLoaded', async () => {
+    await loadTickerNames();
+    let filesToFetch = [];
+    for (let i = 1; i <= 20; i++) {
+      filesToFetch.push(`data/LoadData${i}.csv`);
+    }
+    let filesLoaded = 0;
+    let atLeastOneLoaded = false;
+    filesToFetch.forEach((filename) => {
+      fetch(filename)
+        .then(response => {
+          if (!response.ok) throw new Error('Network response was not ok');
+          return response.text();
+        })
+        .then(csvText => {
+          atLeastOneLoaded = true;
+          let shortName = filename.replace(/^data\/|\.csv$/g, '');
+          buildFromText(csvText, shortName);
+        })
+        .catch(error => {
+          // Ignore errors (file missing)
+        })
+        .finally(() => {
+          filesLoaded++;
+          if (filesLoaded === filesToFetch.length) {
+            if (atLeastOneLoaded) {
+              populateSymbols();
+            }
           }
-        ], {
-          margin: { l: 45, r: 65, t: 110, b: 45 },
-          xaxis: { title: 'RSI Threshold', tickfont: {size:12}, titlefont:{size:12} },
-          yaxis: { title: 'Lookback (days)', tickfont: {size:12}, titlefont:{size:12} },
-          annotations: [
-            {
-              text: symbolSource,
-              xref: 'paper',
-              yref: 'paper',
-              x: 0.5,
-              y: 1.16,
-              xanchor: 'center',
-              yanchor: 'bottom',
-              showarrow: false,
-              font: {
-                size: 16,
-                family: 'sans-serif',
-                color: '#1b365d'
-              }
-            }
-          ]
-        }, { responsive: true });
-
-        setTimeout(() => {
-          const minInput = document.getElementById(`colorbar-min-${plotIdx}`);
-          const maxInput = document.getElementById(`colorbar-max-${plotIdx}`);
-          minInput.onchange = function() {
-            window[colorbarMinKey] = Number(minInput.value);
-            drawHeatmaps();
-          };
-          maxInput.onchange = function() {
-            window[colorbarMaxKey] = Number(maxInput.value);
-            drawHeatmaps();
-          };
-        }, 0);
-
-        const hoverX = section.querySelector(`#hoverX-${plotIdx}`);
-        const hoverY = section.querySelector(`#hoverY-${plotIdx}`);
-        heatDiv.on('plotly_hover', function(eventData) {
-          var pt = eventData.points[0];
-          hoverX.innerText = 'RSI: ' + pt.x;
-          hoverY.innerText = 'Day: ' + pt.y;
         });
-        heatDiv.on('plotly_unhover', function() {
-          hoverX.innerText = '';
-          hoverY.innerText = '';
-        });
-      });
-      if (overallMaxH === -Infinity) currentMaxH.textContent = 'Current Max H: --';
-      else currentMaxH.textContent = 'Current Max H: ' + overallMaxH.toFixed(3);
+    });
+  });
+
+  // 5.8: CSV File Input Handler
+  csvInput.addEventListener('change', e => {
+    const reader = new FileReader();
+    reader.onload = evt => {
+      rawText = evt.target.result;
+      let source = dataSourceSelect.value;
+      buildFromText(rawText, source);
+      populateSymbols();
+    };
+    reader.readAsText(e.target.files[0]);
+  });
+
+  // 5.9: Slider/Input Sync
+  [arFloor, arFloorNum].forEach(el => el.oninput = () => {
+    arFloor.value = arFloorNum.value = el.value; drawHeatmaps();
+  });
+  [mdMin, mdMinNum].forEach(el => el.oninput = () => {
+    mdMin.value = mdMinNum.value = el.value; drawHeatmaps();
+  });
+  [mdCeil, mdCeilNum].forEach(el => el.oninput = () => {
+    mdCeil.value = mdCeilNum.value = el.value; drawHeatmaps();
+  });
+
+  // 5.10: Draw Heatmaps (with TickerNames)
+  function drawHeatmaps() {
+    heatmapsContainer.innerHTML = '';
+    if (!selectedSymbols.length) {
+      currentMaxH.textContent = 'Current Max H: --';
+      const msg = document.createElement('div');
+      msg.style.textAlign = 'center';
+      msg.style.margin = '30px 0 30px 0';
+      msg.style.color = '#666';
+      msg.style.fontSize = '1.10em';
+      msg.innerHTML = 'Select one or more symbols above to view heatmaps.';
+      heatmapsContainer.appendChild(msg);
+      return;
     }
-
-    // 5.10: Compute H Function
-    function computeH(ar, md, floor, minMD) {
-      return ar.map((row, i) => row.map((v, j) => {
-        if (v == null) return null;
-        return (v - floor) / Math.max(md[i][j], minMD);
+    let overallMaxH = -Infinity;
+    selectedSymbols.forEach((symbolSource, plotIdx) => {
+      const match = symbolSource.match(/^(.*) \((.*)\)$/);
+      if (!match) return;
+      const symbol = match[1];
+      const source = match[2];
+      const rows = window.allData.filter(r => r.symbol === symbol && r.source === source);
+      if (!rows.length) return;
+      const xs = Array.from(new Set(rows.map(r => r.rsi))).sort((a, b) => +a - +b);
+      const ys = Array.from(new Set(rows.map(r => r.day))).sort((a, b) => +a - +b);
+      const arM = ys.map(y => xs.map(x => {
+        const rec = rows.find(r => r.day === y && r.rsi === x);
+        return rec ? rec.ar : null;
       }));
-    }
-
-    // 5.11: Export CSV Logic
-    exportCSVBtn.addEventListener('click', function() {
+      const mdM = ys.map(y => xs.map(x => {
+        const rec = rows.find(r => r.day === y && r.rsi === x);
+        return rec ? rec.md : null;
+      }));
+      const cmM = ys.map(y => xs.map(x => {
+        const rec = rows.find(r => r.day === y && r.rsi === x);
+        return rec ? rec.cm : null;
+      }));
       const floor = +arFloor.value;
       const minMD = +mdMin.value;
       const ceilMD = +mdCeil.value;
-      const hColName = `H (Rmin${floor}|Dmin${minMD}|Dmax${ceilMD})`;
-      let csv = `Symbol,Source,Days,RSI,AR,MD,Calmar,${hColName}\n`;
-      selectedSymbols.forEach(symbolSource => {
-        const match = symbolSource.match(/^(.*) \((.*)\)$/);
-        if (!match) return;
-        const symbol = match[1];
-        const source = match[2];
-        const rows = window.allData.filter(r => r.symbol === symbol && r.source === source);
-        const xs = Array.from(new Set(rows.map(r => r.rsi))).sort((a, b) => +a - +b);
-        const ys = Array.from(new Set(rows.map(r => r.day))).sort((a, b) => +a - +b);
-        const arM = ys.map(y => xs.map(x => {
-          const rec = rows.find(r => r.day === y && r.rsi === x);
-          return rec ? rec.ar : null;
-        }));
-        const mdM = ys.map(y => xs.map(x => {
-          const rec = rows.find(r => r.day === y && r.rsi === x);
-          return rec ? rec.md : null;
-        }));
-        const cmM = ys.map(y => xs.map(x => {
-          const rec = rows.find(r => r.day === y && r.rsi === x);
-          return rec ? rec.cm : null;
-        }));
-        const H = computeH(arM, mdM, floor, minMD);
-        for (let i = 0; i < ys.length; ++i) {
-          for (let j = 0; j < xs.length; ++j) {
-            if (arM[i][j] == null) continue;
-            csv += [
-              `"${symbol}"`,
-              `"${source}"`,
-              ys[i], xs[j],
-              arM[i][j], mdM[i][j],
-              (cmM[i][j] == null ? "" : cmM[i][j]),
-              (H[i][j] == null ? "" : H[i][j].toFixed(5))
-            ].join(",") + "\n";
-          }
+      const colorbarMinKey = "colorbarMin-" + plotIdx;
+      const colorbarMaxKey = "colorbarMax-" + plotIdx;
+      let zminVal = window[colorbarMinKey] !== undefined ? window[colorbarMinKey] : -1;
+      let zmaxVal = window[colorbarMaxKey] !== undefined ? window[colorbarMaxKey] : 1;
+      const H = computeH(arM, mdM, floor, minMD);
+      const EPSILON = 1e-6;
+      let mask;
+      if (ceilMD <= EPSILON) mask = mdM.map(row => row.map(() => 1));
+      else if (ceilMD >= 100 - EPSILON) mask = mdM.map(row => row.map(() => 0));
+      else mask = mdM.map(row => row.map(v => (v != null && v > ceilMD) ? 1 : 0));
+      let maxH = -Infinity;
+      H.forEach(row => row.forEach(v => { if (v != null && v > maxH) maxH = v; }));
+      if (maxH > overallMaxH) overallMaxH = maxH;
+      const section = document.createElement('div');
+      section.className = 'heatmap-section';
+      // -- TickerName lookup
+      const fundName = tickerNameMap[symbol] || "";
+      const annotationHTML = fundName
+        ? `<div style="font-size:11px; color:#2e4057; text-align:center; margin-bottom:-6px;">${fundName}</div>`
+        : "";
+      section.innerHTML = `
+        <div style="position:relative;">
+          ${annotationHTML}
+          <div id="heatmap-${plotIdx}" style="height: 56vh;"></div>
+          <div class="colorbar-input-container" style="top: 2px;" id="colorbar-max-container-${plotIdx}">
+            <span class="colorbar-label">Max H</span>
+            <input type="number" step="0.01" value="${zmaxVal}" id="colorbar-max-${plotIdx}" class="colorbar-input">
+          </div>
+          <div class="colorbar-input-container" style="bottom: 16px; top:unset;" id="colorbar-min-container-${plotIdx}">
+            <span class="colorbar-label">Min H</span>
+            <input type="number" step="0.01" value="${zminVal}" id="colorbar-min-${plotIdx}" class="colorbar-input">
+          </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.97em; margin-top:2px;">
+          <span id="hoverX-${plotIdx}"></span>
+          <span id="hoverY-${plotIdx}"></span>
+        </div>`;
+      heatmapsContainer.appendChild(section);
+      const heatDiv = section.querySelector(`#heatmap-${plotIdx}`);
+      Plotly.newPlot(heatDiv, [
+        {
+          z: H, x: xs, y: ys, type: 'heatmap',
+          colorscale: [[0, 'green'], [0.5, 'yellow'], [1, 'red']],
+          zmin: zminVal, zmax: zmaxVal,
+          colorbar: {
+            thickness: 15, len: 0.92, x: 1.01, y: 0.5, tickfont: {size: 12}
+          },
+          customdata: arM.map((r, i) => r.map((_, j) => [arM[i][j], mdM[i][j], cmM[i][j], H[i][j]])),
+          hovertemplate: 'AR: %{customdata[0]:.2f}%<br>MD: %{customdata[1]:.2f}%<br>Calmar: %{customdata[2]:.2f}<br>H: %{customdata[3]:.3f}<extra></extra>'
+        },
+        {
+          z: mask, x: xs, y: ys, type: 'heatmap', showscale: false,
+          colorscale: [[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0.45)']], hoverinfo: 'skip'
         }
+      ], {
+        margin: { l: 45, r: 65, t: 110, b: 45 },
+        xaxis: { title: 'RSI Threshold', tickfont: {size:12}, titlefont:{size:12} },
+        yaxis: { title: 'Lookback (days)', tickfont: {size:12}, titlefont:{size:12} },
+        annotations: [
+          {
+            text: symbolSource,
+            xref: 'paper',
+            yref: 'paper',
+            x: 0.5,
+            y: 1.16,
+            xanchor: 'center',
+            yanchor: 'bottom',
+            showarrow: false,
+            font: {
+              size: 16,
+              family: 'sans-serif',
+              color: '#1b365d'
+            }
+          }
+        ]
+      }, { responsive: true });
+
+      setTimeout(() => {
+        const minInput = document.getElementById(`colorbar-min-${plotIdx}`);
+        const maxInput = document.getElementById(`colorbar-max-${plotIdx}`);
+        minInput.onchange = function() {
+          window[colorbarMinKey] = Number(minInput.value);
+          drawHeatmaps();
+        };
+        maxInput.onchange = function() {
+          window[colorbarMaxKey] = Number(maxInput.value);
+          drawHeatmaps();
+        };
+      }, 0);
+
+      const hoverX = section.querySelector(`#hoverX-${plotIdx}`);
+      const hoverY = section.querySelector(`#hoverY-${plotIdx}`);
+      heatDiv.on('plotly_hover', function(eventData) {
+        var pt = eventData.points[0];
+        hoverX.innerText = 'RSI: ' + pt.x;
+        hoverY.innerText = 'Day: ' + pt.y;
       });
-      const blob = new Blob([csv], {type: "text/csv"});
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "merged_heatmap_data.csv";
-      document.body.appendChild(a); a.click();
-      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 0);
+      heatDiv.on('plotly_unhover', function() {
+        hoverX.innerText = '';
+        hoverY.innerText = '';
+      });
+    });
+    if (overallMaxH === -Infinity) currentMaxH.textContent = 'Current Max H: --';
+    else currentMaxH.textContent = 'Current Max H: ' + overallMaxH.toFixed(3);
+  }
+
+  // 5.11: Compute H Function
+  function computeH(ar, md, floor, minMD) {
+    return ar.map((row, i) => row.map((v, j) => {
+      if (v == null) return null;
+      return (v - floor) / Math.max(md[i][j], minMD);
+    }));
+  }
+
+  // 5.12: Export CSV Logic
+  exportCSVBtn.addEventListener('click', function() {
+    const floor = +arFloor.value;
+    const minMD = +mdMin.value;
+    const ceilMD = +mdCeil.value;
+    const hColName = `H (Rmin${floor}|Dmin${minMD}|Dmax${ceilMD})`;
+    let csv = `Symbol,Source,Days,RSI,AR,MD,Calmar,${hColName}\n`;
+    selectedSymbols.forEach(symbolSource => {
+      const match = symbolSource.match(/^(.*) \((.*)\)$/);
+      if (!match) return;
+      const symbol = match[1];
+      const source = match[2];
+      const rows = window.allData.filter(r => r.symbol === symbol && r.source === source);
+      const xs = Array.from(new Set(rows.map(r => r.rsi))).sort((a, b) => +a - +b);
+      const ys = Array.from(new Set(rows.map(r => r.day))).sort((a, b) => +a - +b);
+      const arM = ys.map(y => xs.map(x => {
+        const rec = rows.find(r => r.day === y && r.rsi === x);
+        return rec ? rec.ar : null;
+      }));
+      const mdM = ys.map(y => xs.map(x => {
+        const rec = rows.find(r => r.day === y && r.rsi === x);
+        return rec ? rec.md : null;
+      }));
+      const cmM = ys.map(y => xs.map(x => {
+        const rec = rows.find(r => r.day === y && r.rsi === x);
+        return rec ? rec.cm : null;
+      }));
+      const H = computeH(arM, mdM, floor, minMD);
+      for (let i = 0; i < ys.length; ++i) {
+        for (let j = 0; j < xs.length; ++j) {
+          if (arM[i][j] == null) continue;
+          csv += [
+            `"${symbol}"`,
+            `"${source}"`,
+            ys[i], xs[j],
+            arM[i][j], mdM[i][j],
+            (cmM[i][j] == null ? "" : cmM[i][j]),
+            (H[i][j] == null ? "" : H[i][j].toFixed(5))
+          ].join(",") + "\n";
+        }
+      }
+    });
+    const blob = new Blob([csv], {type: "text/csv"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "merged_heatmap_data.csv";
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 0);
+  });
+
+  // 5.13: Build From Text Function
+  function buildFromText(text, defaultSource) {
+    const lines = text.trim().split(/\r?\n/);
+    if (!lines.length) return;
+
+    const headerMap = {
+      symbol: ['symbol', 'ticker', 'name'],
+      source: ['source', 'data source', 'datasource', 'data'],
+      day: ['day', 'days', 'timeframe', 'window', 'period', 'lookback'],
+      rsi: ['rsi', 'relative strength index'],
+      ar: ['ar', 'annualized return', 'cagr'],
+      md: ['md', 'max drawdown', 'drawdown']
+    };
+
+    function findCol(headers, aliases) {
+      for (let i = 0; i < headers.length; ++i) {
+        const h = headers[i].trim().toLowerCase();
+        if (aliases.includes(h)) return i;
+      }
+      return -1;
+    }
+
+    const headers = lines[0].split(',');
+    const colIdx = {};
+    Object.keys(headerMap).forEach(key => {
+      const idx = findCol(headers, headerMap[key].map(s => s.toLowerCase()));
+      if (idx === -1 && key !== 'source') {
+        throw new Error(`Missing column for ${key} (${headerMap[key].join('/')})`);
+      }
+      colIdx[key] = idx;
     });
 
-    // 5.12: Build From Text Function
-    function buildFromText(text, defaultSource) {
-      const lines = text.trim().split(/\r?\n/);
-      if (!lines.length) return;
-
-      const headerMap = {
-        symbol: ['symbol', 'ticker', 'name'],
-        source: ['source', 'data source', 'datasource', 'data'],
-        day: ['day', 'days', 'timeframe', 'window', 'period', 'lookback'],
-        rsi: ['rsi', 'relative strength index'],
-        ar: ['ar', 'annualized return', 'cagr'],
-        md: ['md', 'max drawdown', 'drawdown']
-      };
-
-      function findCol(headers, aliases) {
-        for (let i = 0; i < headers.length; ++i) {
-          const h = headers[i].trim().toLowerCase();
-          if (aliases.includes(h)) return i;
-        }
-        return -1;
+    for (let i = 1; i < lines.length; ++i) {
+      const c = lines[i].split(',');
+      if (c.length < headers.length) continue;
+      const symbol = c[colIdx.symbol];
+      const source = (colIdx.source !== -1 && c[colIdx.source]) ? c[colIdx.source] : defaultSource;
+      const day = +c[colIdx.day];
+      const rsi = c[colIdx.rsi];
+      let ar = parseFloat(c[colIdx.ar]), md = parseFloat(c[colIdx.md]);
+      if (decimalToPercentBox && decimalToPercentBox.checked) {
+        ar *= 100; md *= 100;
       }
-
-      const headers = lines[0].split(',');
-      const colIdx = {};
-      Object.keys(headerMap).forEach(key => {
-        const idx = findCol(headers, headerMap[key].map(s => s.toLowerCase()));
-        if (idx === -1 && key !== 'source') {
-          throw new Error(`Missing column for ${key} (${headerMap[key].join('/')})`);
-        }
-        colIdx[key] = idx;
-      });
-
-      for (let i = 1; i < lines.length; ++i) {
-        const c = lines[i].split(',');
-        if (c.length < headers.length) continue;
-        const symbol = c[colIdx.symbol];
-        const source = (colIdx.source !== -1 && c[colIdx.source]) ? c[colIdx.source] : defaultSource;
-        const day = +c[colIdx.day];
-        const rsi = c[colIdx.rsi];
-        let ar = parseFloat(c[colIdx.ar]), md = parseFloat(c[colIdx.md]);
-        if (decimalToPercentBox && decimalToPercentBox.checked) {
-          ar *= 100; md *= 100;
-        }
-        const cm = (md === 0 ? null : ar / md);
-        window.allData.push({ symbol, source, day, rsi, ar, md, cm });
-      }
+      const cm = (md === 0 ? null : ar / md);
+      window.allData.push({ symbol, source, day, rsi, ar, md, cm });
     }
-  </script>
-  <!-- End Chapter 5: MAIN SCRIPT -->
+  }
+</script>
+<!-- End Chapter 5: MAIN SCRIPT -->
+
 
 </body>
 </html>
