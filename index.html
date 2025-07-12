@@ -281,24 +281,45 @@
       currentMaxH.textContent = 'Current Max H: --';
     });
 
-    // 8.6 AUTOLOAD CSV ON PAGE LOAD
-    window.addEventListener('DOMContentLoaded', () => {
-      fetch('data/LoadDataTQQQ.csv')
-        .then(response => {
-          if (!response.ok) throw new Error('Network response was not ok');
-          return response.text();
-        })
-        .then(csvText => {
-          rawText = csvText;
-          buildFromText(csvText, "Exxahub");
-          populateSymbols();
-        })
-        .catch(error => {
-          // No auto-load data available
-        });
-    });
+  // 8.6 AUTOLOAD CSV ON PAGE LOAD
+window.addEventListener('DOMContentLoaded', () => {
+  let filesToFetch = [];
+  for (let i = 1; i <= 20; i++) {
+    filesToFetch.push(`data/LoadData${i}.csv`);
+  }
+  let filesLoaded = 0;
 
-    // 8.7 CSV FILE INPUT HANDLER
+  // Track if any file loaded so we know whether to populateSymbols()
+  let atLeastOneLoaded = false;
+
+  filesToFetch.forEach((filename) => {
+    fetch(filename)
+      .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.text();
+      })
+      .then(csvText => {
+        atLeastOneLoaded = true;
+        // Use filename for the "source" label, or "Exxahub" if you prefer
+        let shortName = filename.replace(/^data\/|\.csv$/g, '');
+        buildFromText(csvText, shortName);
+      })
+      .catch(error => {
+        // Ignore errors (file missing)
+      })
+      .finally(() => {
+        filesLoaded++;
+        if (filesLoaded === filesToFetch.length) {
+          // All attempted, now populate symbols (if any loaded)
+          if (atLeastOneLoaded) {
+            populateSymbols();
+          }
+        }
+      });
+  });
+});
+// 8.7 CSV FILE INPUT HANDLER
+
     csvInput.addEventListener('change', e => {
       const reader = new FileReader();
       reader.onload = evt => {
