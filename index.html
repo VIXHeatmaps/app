@@ -517,75 +517,64 @@ function drawHeatmaps() {
       setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 0);
     });
 
-    // 8.12 BUILD FROM TEXT FUNCTION (CSV Parsing and Data Merge)
-    function buildFromText(text, source) {
-      const lines = text.trim().split(/\r?\n/);
-      if (!lines.length) return;
+   // 8.12 BUILD FROM TEXT FUNCTION (CSV Parsing and Data Merge)
+function buildFromText(text, defaultSource) {
+  const lines = text.trim().split(/\r?\n/);
+  if (!lines.length) return;
 
-      const headerMap = {
-        symbol: ['symbol', 'ticker', 'name'],
-        day: ['day', 'days', 'timeframe', 'window', 'period', 'lookback'],
-        rsi: ['rsi', 'relative strength index'],
-        ar: ['ar', 'annualized return', 'cagr'],
-        md: ['md', 'max drawdown', 'drawdown']
-      };
+  const headerMap = {
+    symbol: ['symbol', 'ticker', 'name'],
+    source: ['source', 'data source', 'datasource', 'data'],
+    day: ['day', 'days', 'timeframe', 'window', 'period', 'lookback'],
+    rsi: ['rsi', 'relative strength index'],
+    ar: ['ar', 'annualized return', 'cagr'],
+    md: ['md', 'max drawdown', 'drawdown']
+  };
 
-      function findCol(headers, aliases) {
-        for (let i = 0; i < headers.length; ++i) {
-          const h = headers[i].trim().toLowerCase();
-          if (aliases.includes(h)) return i;
-        }
-        return -1;
-      }
-
-      const headers = lines[0].split(',');
-      const colIdx = {};
-      Object.keys(headerMap).forEach(key => {
-        const idx = findCol(headers, headerMap[key].map(s => s.toLowerCase()));
-        if (idx === -1) {
-          throw new Error(`Missing column for ${key} (${headerMap[key].join('/')})`);
-        }
-        colIdx[key] = idx;
-      });
-
-      // Store per-symbol per-source
-      const temp = {};
-
-      for (let i = 1; i < lines.length; ++i) {
-        const c = lines[i].split(',');
-        if (c.length < headers.length) continue;
-        const symSource = c[colIdx.symbol] + " (" + source + ")";
-        const d = +c[colIdx.day];
-        const x = c[colIdx.rsi];
-        let ar = parseFloat(c[colIdx.ar]), md = parseFloat(c[colIdx.md]);
-        if (decimalToPercentBox && decimalToPercentBox.checked) {
-          ar *= 100; md *= 100;
-        }
-        const cm = (md === 0 ? null : ar / md);
-        temp[symSource] = temp[symSource] || [];
-        temp[symSource].push({ day: d, rsi: x, ar, md, cm });
-      }
-
-      // Merge into allData
-      Object.keys(temp).forEach(s => {
-        const arr = temp[s];
-        const xs = Array.from(new Set(arr.map(o => o.rsi))).sort();
-        const ys = Array.from(new Set(arr.map(o => o.day))).sort((a, b) => a - b);
-        const arM = ys.map(y => xs.map(x => {
-          const rec = arr.find(o => o.day === y && o.rsi === x);
-          return rec ? rec.ar : null;
-        }));
-        const mdM = ys.map(y => xs.map(x => {
-          const rec = arr.find(o => o.day === y && o.rsi === x);
-          return rec ? rec.md : null;
-        }));
-        const cmM = ys.map(y => xs.map(x => {
-          const rec = arr.find(o => o.day === y && o.rsi === x);
-          return rec ? rec.cm : null;
-        }));
-        allData[s] = { x: xs, y: ys, ar: arM, md: mdM, cm: cmM };
-      });
+  function findCol(headers, aliases) {
+    for (let i = 0; i < headers.length; ++i) {
+      const h = headers[i].trim().toLowerCase();
+      if (aliases.includes(h)) return i;
     }
+    return -1;
+  }
+
+  const headers = lines[0].split(',');
+  const colIdx = {};
+  Object.keys(headerMap).forEach(key => {
+    const idx = findCol(headers, headerMap[key].map(s => s.toLowerCase()));
+    if (idx === -1 && key !== 'source') {
+      throw new Error(`Missing column for ${key} (${headerMap[key].join('/')})`);
+    }
+    colIdx[key] = idx;
+  });
+
+  // Initialize allData if not present as array
+  if (!Array.isArray(window.allData)) {
+    window.allData = [];
+  }
+
+  for (let i = 1; i < lines.length; ++i) {
+    const c = lines[i].split(',');
+    if (c.length < headers.length) continue;
+
+    // Extract each field
+    const symbol = c[colIdx.symbol];
+    const source = (colIdx.source !== -1 && c[colIdx.source]) ? c[colIdx.source] : defaultSource;
+    const day = +c[colIdx.day];
+    const rsi = c[colIdx.rsi];
+    let ar = parseFloat(c[colIdx.ar]), md = parseFloat(c[colIdx.md]);
+    if (decimalToPercentBox && decimalToPercentBox.checked) {
+      ar *= 100; md *= 100;
+    }
+    const cm = (md === 0 ? null : ar / md);
+
+    window.allData.push({ symbol, source, day, rsi, ar, md, cm });
+  }
+}
+
+// 9. END OF SCRIPT / FUTURE CHAPTERS
+    
   </script>
 </body>
 </html>
