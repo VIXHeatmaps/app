@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8">
   <title>Heatmap Viewer</title>
+
+  <!-- Chapter 1: LIBRARIES & CSS -->
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
+    /* 1.1: GLOBAL CSS */
     html, body { font-size: 12px; font-family: sans-serif; margin: 12px; }
     .header { display: flex; justify-content: space-between; align-items: flex-start; }
     .controls { flex: 1; }
     .right-controls {
       min-width: 220px;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 6px;
-      font-size: 12px;
+      display: flex; flex-direction: column; align-items: flex-start; gap: 6px; font-size: 12px;
     }
     .rc-row { display: flex; align-items: center; gap: 6px; font-size: 12px; }
     .rc-row label, .csv-link, .export-btn, .select-note { font-size: 12px; }
@@ -41,8 +40,7 @@
     .heatmap-section:last-child { border-bottom: none; }
     .currentMaxH-label { font-weight: bold; margin-left:8px; font-size: 12px;}
     .symbol-multiselect {
-      position: relative; width: 180px; max-width: 100%;
-      z-index: 11; display: inline-block; font-size: 12px;
+      position: relative; width: 180px; max-width: 100%; z-index: 11; display: inline-block; font-size: 12px;
     }
     .symbol-multiselect .selected-label {
       border: 1px solid #bbb; border-radius: 5px; padding: 2px 6px; min-height: 18px;
@@ -54,8 +52,7 @@
     .symbol-multiselect.open .selected-label { border-color: #1884f7; background: #f5faff;}
     .symbol-multiselect-list {
       position: absolute; top: 107%; left: 0; right: 0; min-width: 160px;
-      max-height: 220px;
-      background: #fff; border: 1px solid #1884f7; border-radius: 6px;
+      max-height: 220px; background: #fff; border: 1px solid #1884f7; border-radius: 6px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.07); padding: 4px 0 4px 0; overflow-y: auto; z-index: 99; font-size: 12px;
     }
     .symbol-multiselect-list label { display: flex; align-items: center; padding: 2px 6px; cursor: pointer; white-space: nowrap; transition: background 0.07s; font-size: 12px; }
@@ -65,41 +62,33 @@
       font-size: 12px; font-family: inherit; padding: 1px 2px;
     }
     .colorbar-input-container {
-      position: absolute;
-      left: unset; right: 13px;
-      z-index: 5;
-      pointer-events: none;
-      width: 30px;
+      position: absolute; left: unset; right: 13px; z-index: 5;
+      pointer-events: none; width: 30px;
     }
     .colorbar-input {
-      pointer-events: auto;
-      width: 30px;
-      font-size: 12px;
-      border: 1px solid #bbb;
-      border-radius: 3px;
-      margin-bottom: 0px;
-      text-align: right;
-      background: #fff;
+      pointer-events: auto; width: 30px; font-size: 12px;
+      border: 1px solid #bbb; border-radius: 3px; margin-bottom: 0px;
+      text-align: right; background: #fff;
     }
     .colorbar-label {
-      font-size: 11px;
-      font-weight: bold;
-      color: #444;
-      margin-bottom: 2px;
-      margin-top: 2px;
-      display: block;
-      text-align: right;
-      user-select: none;
-      pointer-events: none;
+      font-size: 11px; font-weight: bold; color: #444;
+      margin-bottom: 2px; margin-top: 2px; display: block; text-align: right;
+      user-select: none; pointer-events: none;
     }
   </style>
+  <!-- End Chapter 1 -->
+
 </head>
 <body>
+
+  <!-- Chapter 2: LAYOUT & CONTROLS -->
   <div style="display: flex; justify-content: space-between; align-items: flex-start;">
     <div class="controls">
+      <!-- 2.1: Metric Display -->
       <div style="font-size: 14px; font-style: italic; margin-bottom: 10px;">
         <b>Metric:</b> H = (AR – AR<sub>min</sub>) / max(MD, MD<sub>min</sub>) <span style="font-size: 11px;">(decimal)</span>
       </div>
+      <!-- 2.2: Symbol MultiSelect -->
       <div style="font-weight:bold; margin-bottom:6px;">
         Symbol:
         <div class="symbol-multiselect" id="symbolMultiSelectBox">
@@ -108,6 +97,7 @@
         </div>
         <button id="clearDataBtn" style="margin-left:8px;">Clear Data</button>
       </div>
+      <!-- 2.3: Filters -->
       <div><b>AR Min. (%):</b>
         <input type="range" id="arFloor" min="0" max="100" step="0.1" value="3" style="width:110px;vertical-align:middle;">
         <input type="number" id="arFloorNum" min="0" max="100" step="0.1" value="3" style="width:35px;">
@@ -120,8 +110,10 @@
         <input type="range" id="mdCeil" min="0" max="100" step="0.1" value="50" style="width:110px;vertical-align:middle;">
         <input type="number" id="mdCeilNum" min="0" max="100" step="0.1" value="50" style="width:35px;">
       </div>
+      <!-- 2.4: Current MaxH Display -->
       <span id="currentMaxH" class="currentMaxH-label">Current Max H: --</span>
     </div>
+    <!-- 2.5: Right Controls -->
     <div class="right-controls">
       <div class="rc-row">
         <label for="dataSourceSelect">Data Source:</label>
@@ -145,6 +137,9 @@
       <button id="exportCSVBtn" class="export-btn">Download Data</button>
     </div>
   </div>
+  <!-- End Chapter 2 -->
+
+  <!-- Chapter 3: CSV MODAL -->
   <div id="csvModal">
     <div class="modal-content">
       <button id="closeModalBtn" title="Close">&times;</button>
@@ -160,9 +155,15 @@
       <div style="color: #008000; margin-top: 5px;">✓ (<b>column order doesn't matter</b>)</div>
     </div>
   </div>
+  <!-- End Chapter 3 -->
+
+  <!-- Chapter 4: HEATMAP CONTAINER -->
   <div id="heatmapsContainer" style="margin-top:18px;"></div>
+  <!-- End Chapter 4 -->
+
+  <!-- Chapter 5: MAIN SCRIPT -->
   <script>
-    // 8.1 CSV MODAL LOGIC
+    // 5.1: CSV Modal Logic
     document.getElementById('showCsvTemplate').onclick = function() {
       document.getElementById('csvModal').style.display = 'flex';
     };
@@ -175,13 +176,13 @@
       }
     };
 
-    // 8.2 GLOBAL STATE (ONLY window.allData, not let/const allData!)
+    // 5.2: GLOBAL STATE
     window.allData = [];
     let rawText = null;
     let selectedSymbols = [];
     let allSymbolList = [];
 
-    // 8.3 DOM ELEMENT REFERENCES
+    // 5.3: DOM References
     const csvInput = document.getElementById('csvInput'),
           arFloor = document.getElementById('arFloor'),
           arFloorNum = document.getElementById('arFloorNum'),
@@ -196,7 +197,7 @@
           heatmapsContainer = document.getElementById('heatmapsContainer'),
           currentMaxH = document.getElementById('currentMaxH');
 
-    // 8.4 SYMBOL MULTISELECT LOGIC
+    // 5.4: Symbol Multiselect Logic
     const symbolMultiSelectBox = document.getElementById('symbolMultiSelectBox');
     const symbolMultiSelectLabel = document.getElementById('symbolMultiSelectLabel');
     const symbolMultiSelectList = document.getElementById('symbolMultiSelectList');
@@ -275,7 +276,7 @@
       else symbolMultiSelectLabel.innerText = `${selectedSymbols.length} symbols`;
     }
 
-    // 8.5 CLEAR DATA BUTTON
+    // 5.5: Clear Data
     clearDataBtn.addEventListener('click', () => {
       window.allData = [];
       selectedSymbols = [];
@@ -286,7 +287,7 @@
       currentMaxH.textContent = 'Current Max H: --';
     });
 
-    // 8.6 AUTOLOAD CSV ON PAGE LOAD
+    // 5.6: Autoload CSV on Page Load
     window.addEventListener('DOMContentLoaded', () => {
       let filesToFetch = [];
       for (let i = 1; i <= 20; i++) {
@@ -319,7 +320,7 @@
       });
     });
 
-    // 8.7 CSV FILE INPUT HANDLER
+    // 5.7: CSV File Input Handler
     csvInput.addEventListener('change', e => {
       const reader = new FileReader();
       reader.onload = evt => {
@@ -331,7 +332,7 @@
       reader.readAsText(e.target.files[0]);
     });
 
-    // 8.8 SLIDER & INPUT CONTROLS SYNC
+    // 5.8: Slider/Input Sync
     [arFloor, arFloorNum].forEach(el => el.oninput = () => {
       arFloor.value = arFloorNum.value = el.value; drawHeatmaps();
     });
@@ -342,7 +343,7 @@
       mdCeil.value = mdCeilNum.value = el.value; drawHeatmaps();
     });
 
-    // 8.9 DRAW HEATMAPS LOGIC (NO CHANGES, but reads window.allData)
+    // 5.9: Draw Heatmaps
     function drawHeatmaps() {
       heatmapsContainer.innerHTML = '';
       if (!selectedSymbols.length) {
@@ -481,7 +482,7 @@
       else currentMaxH.textContent = 'Current Max H: ' + overallMaxH.toFixed(3);
     }
 
-    // 8.10 COMPUTE H FUNCTION
+    // 5.10: Compute H Function
     function computeH(ar, md, floor, minMD) {
       return ar.map((row, i) => row.map((v, j) => {
         if (v == null) return null;
@@ -489,7 +490,7 @@
       }));
     }
 
-    // 8.11 EXPORT CSV LOGIC
+    // 5.11: Export CSV Logic
     exportCSVBtn.addEventListener('click', function() {
       const floor = +arFloor.value;
       const minMD = +mdMin.value;
@@ -539,7 +540,7 @@
       setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 0);
     });
 
-    // 8.12 BUILD FROM TEXT FUNCTION (CSV Parsing and Data Merge)
+    // 5.12: Build From Text Function
     function buildFromText(text, defaultSource) {
       const lines = text.trim().split(/\r?\n/);
       if (!lines.length) return;
@@ -587,5 +588,7 @@
       }
     }
   </script>
+  <!-- End Chapter 5: MAIN SCRIPT -->
+
 </body>
 </html>
