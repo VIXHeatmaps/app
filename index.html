@@ -362,7 +362,7 @@
     mdCeil.value = mdCeilNum.value = el.value; drawHeatmaps();
   });
 
-// 5.10: Draw Heatmaps (vertically centered Days label/value at y-axis)
+// 5.10: Draw Heatmaps (with TickerNames, uniform axes, and improved number-label layout)
 function drawHeatmaps() {
   heatmapsContainer.innerHTML = '';
   if (!selectedSymbols.length) {
@@ -415,48 +415,40 @@ function drawHeatmaps() {
     H.forEach(row => row.forEach(v => { if (v != null && v > maxH) maxH = v; }));
     if (maxH > overallMaxH) overallMaxH = maxH;
 
-    // Layout: Fund name between ticker/source and heatmap
+    // --- Layout: Fund name between ticker/source and heatmap
     const fundName = tickerNameMap[symbol] || "";
-    // Outer container = relative
-    const section = document.createElement('div');
+    section = document.createElement('div');
     section.className = 'heatmap-section';
-    section.style.position = "relative";
     section.innerHTML = `
-      <div id="heatmap-title-${plotIdx}" style="text-align:center;">
-        <div style="font-size:18px;color:#1b365d;font-weight:500;margin-bottom:0px;">${symbolSource}</div>
-        ${fundName ? `<div style="font-size:12px; color:#2e4057; margin-top:2px; margin-bottom:10px;">${fundName}</div>` : ""}
-      </div>
-      <div style="display:flex; flex-direction:row; align-items:stretch; position:relative;">
-        <div id="yHoverBox-${plotIdx}" style="
-            position:absolute;
-            left:0; 
-            top:0; 
-            bottom:0; 
-            width:38px; 
-            display:flex; 
-            flex-direction:column; 
-            align-items:center; 
-            justify-content:center; 
-            z-index:2;">
-          <span id="hoverYValue-${plotIdx}" 
-                style="font-size:18px; font-weight:700; color:#253358; min-height:24px; writing-mode:vertical-lr; transform: rotate(180deg); text-align:center;"></span>
-          <span style="font-size:16px; font-weight:bold; color:#1b365d; writing-mode:vertical-lr; transform: rotate(180deg); text-align:center; margin-top:2px;">Days</span>
+      <div style="position:relative;">
+        <div id="heatmap-title-${plotIdx}" style="text-align:center;">
+          <div style="font-size:18px;color:#1b365d;font-weight:500;margin-bottom:0px;">${symbolSource}</div>
+          ${fundName ? `<div style="font-size:12px; color:#2e4057; margin-top:2px; margin-bottom:10px;">${fundName}</div>` : ""}
         </div>
-        <div style="flex:1; margin-left:38px;">
-          <div id="heatmap-${plotIdx}" style="height: 56vh;"></div>
-          <div class="colorbar-input-container" style="top: 2px;" id="colorbar-max-container-${plotIdx}">
-            <span class="colorbar-label">Max H</span>
-            <input type="number" step="0.01" value="${zmaxVal}" id="colorbar-max-${plotIdx}" class="colorbar-input">
+        <div style="display:flex; flex-direction:row; align-items:flex-start;">
+          <div id="yHoverBox-${plotIdx}" style="width:40px; display:flex; flex-direction:column; align-items:center; margin-top:15px;">
+            <span id="daysLabelBox-${plotIdx}" 
+                  style="font-size:18px; font-weight:600; color:#233A54; writing-mode:vertical-rl; text-align:center; height:120px; display:flex; flex-direction:column; justify-content:center;">
+              <span id="hoverYValue-${plotIdx}" style="font-size:18px; font-weight:600; color:#233A54; letter-spacing:1px;"></span>
+              <span style="font-size:18px; font-weight:600; color:#233A54;">Days</span>
+            </span>
           </div>
-          <div class="colorbar-input-container" style="bottom: 16px; top:unset;" id="colorbar-min-container-${plotIdx}">
-            <span class="colorbar-label">Min H</span>
-            <input type="number" step="0.01" value="${zminVal}" id="colorbar-min-${plotIdx}" class="colorbar-input">
+          <div style="flex:1;">
+            <div id="heatmap-${plotIdx}" style="height: 56vh;"></div>
+            <div class="colorbar-input-container" style="top: 2px;" id="colorbar-max-container-${plotIdx}">
+              <span class="colorbar-label">Max H</span>
+              <input type="number" step="0.01" value="${zmaxVal}" id="colorbar-max-${plotIdx}" class="colorbar-input">
+            </div>
+            <div class="colorbar-input-container" style="bottom: 16px; top:unset;" id="colorbar-min-container-${plotIdx}">
+              <span class="colorbar-label">Min H</span>
+              <input type="number" step="0.01" value="${zminVal}" id="colorbar-min-${plotIdx}" class="colorbar-input">
+            </div>
           </div>
         </div>
-      </div>
-      <div style="display: flex; flex-direction:column; align-items:center; margin-top:2px;">
-        <span style="font-size:13px; color:#3e5678; margin-bottom:0;">RSI</span>
-        <span id="hoverXValue-${plotIdx}" style="font-size:16px; font-weight:bold; color:#253358; min-height:22px;"></span>
+        <div style="display: flex; flex-direction:row; justify-content:center; align-items:center; margin-top:2px;">
+          <span style="font-size:18px; color:#233A54; font-weight:600; margin-right:4px;">RSI</span>
+          <span id="hoverXValue-${plotIdx}" style="font-size:18px; font-weight:600; color:#233A54; min-width:24px; text-align:left;"></span>
+        </div>
       </div>
     `;
     heatmapsContainer.appendChild(section);
@@ -516,6 +508,7 @@ function drawHeatmaps() {
   if (overallMaxH === -Infinity) currentMaxH.textContent = 'Current Max H: --';
   else currentMaxH.textContent = 'Current Max H: ' + overallMaxH.toFixed(3);
 }
+
 
 
 
