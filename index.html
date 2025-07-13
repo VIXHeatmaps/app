@@ -361,7 +361,7 @@
     mdCeil.value = mdCeilNum.value = el.value; drawHeatmaps();
   });
 
-   // 5.10: Draw Heatmaps (with fund name as annotation BELOW Ticker)
+ // 5.10: Draw Heatmaps (with TickerNames, custom axes, and hovered values)
 function drawHeatmaps() {
   heatmapsContainer.innerHTML = '';
   if (!selectedSymbols.length) {
@@ -413,67 +413,44 @@ function drawHeatmaps() {
     let maxH = -Infinity;
     H.forEach(row => row.forEach(v => { if (v != null && v > maxH) maxH = v; }));
     if (maxH > overallMaxH) overallMaxH = maxH;
-    const section = document.createElement('div');
-    section.className = 'heatmap-section';
 
-    // ---- Fund Name for annotation
+    // --- Layout: Fund name between ticker/source and heatmap
     const fundName = tickerNameMap[symbol] || "";
-
+    section = document.createElement('div');
+    section.className = 'heatmap-section';
     section.innerHTML = `
       <div style="position:relative;">
-        <div id="heatmap-${plotIdx}" style="height: 56vh;"></div>
-        <div class="colorbar-input-container" style="top: 2px;" id="colorbar-max-container-${plotIdx}">
-          <span class="colorbar-label">Max H</span>
-          <input type="number" step="0.01" value="${zmaxVal}" id="colorbar-max-${plotIdx}" class="colorbar-input">
+        <div id="heatmap-title-${plotIdx}" style="text-align:center;">
+          <div style="font-size:18px;color:#1b365d;font-weight:500;margin-bottom:0px;">${symbolSource}</div>
+          ${fundName ? `<div style="font-size:12px; color:#2e4057; margin-top:2px; margin-bottom:10px;">${fundName}</div>` : ""}
         </div>
-        <div class="colorbar-input-container" style="bottom: 16px; top:unset;" id="colorbar-min-container-${plotIdx}">
-          <span class="colorbar-label">Min H</span>
-          <input type="number" step="0.01" value="${zminVal}" id="colorbar-min-${plotIdx}" class="colorbar-input">
+        <div style="display:flex; flex-direction:row; align-items:flex-start;">
+          <div id="yHoverBox-${plotIdx}" style="width:35px; display:flex; flex-direction:column; align-items:center; margin-top:12px;">
+            <span id="hoverYValue-${plotIdx}" style="font-size:15px; font-weight:bold; color:#253358; min-height:18px; writing-mode:vertical-rl; text-align:center;"></span>
+            <span style="font-size:13px; font-weight:normal; color:#3e5678; writing-mode:vertical-rl; text-align:center;">Days</span>
+          </div>
+          <div style="flex:1;">
+            <div id="heatmap-${plotIdx}" style="height: 56vh;"></div>
+            <div class="colorbar-input-container" style="top: 2px;" id="colorbar-max-container-${plotIdx}">
+              <span class="colorbar-label">Max H</span>
+              <input type="number" step="0.01" value="${zmaxVal}" id="colorbar-max-${plotIdx}" class="colorbar-input">
+            </div>
+            <div class="colorbar-input-container" style="bottom: 16px; top:unset;" id="colorbar-min-container-${plotIdx}">
+              <span class="colorbar-label">Min H</span>
+              <input type="number" step="0.01" value="${zminVal}" id="colorbar-min-${plotIdx}" class="colorbar-input">
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction:column; align-items:center; margin-top:2px;">
+          <span style="font-size:13px; color:#3e5678; margin-bottom:0;">RSI</span>
+          <span id="hoverXValue-${plotIdx}" style="font-size:15px; font-weight:bold; color:#253358; min-height:18px;"></span>
         </div>
       </div>
-      <div style="display: flex; justify-content: space-between; font-size: 0.97em; margin-top:2px;">
-        <span id="hoverX-${plotIdx}"></span>
-        <span id="hoverY-${plotIdx}"></span>
-      </div>`;
+    `;
     heatmapsContainer.appendChild(section);
+
+    // --- Main heatmap plot
     const heatDiv = section.querySelector(`#heatmap-${plotIdx}`);
-
-    // Add two annotations: ticker (big), then fund name (small, just below)
-    let annotations = [
-      {
-        text: symbolSource,
-        xref: 'paper',
-        yref: 'paper',
-        x: 0.5,
-        y: 1.16,
-        xanchor: 'center',
-        yanchor: 'bottom',
-        showarrow: false,
-        font: {
-          size: 16,
-          family: 'sans-serif',
-          color: '#1b365d'
-        }
-      }
-    ];
-    if (fundName) {
-      annotations.push({
-        text: fundName,
-        xref: 'paper',
-        yref: 'paper',
-        x: 0.5,
-        y: 1.12, // Just below the main annotation
-        xanchor: 'center',
-        yanchor: 'bottom',
-        showarrow: false,
-        font: {
-          size: 12,
-          family: 'sans-serif',
-          color: '#2e4057'
-        }
-      });
-    }
-
     Plotly.newPlot(heatDiv, [
       {
         z: H, x: xs, y: ys, type: 'heatmap',
@@ -490,12 +467,13 @@ function drawHeatmaps() {
         colorscale: [[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0.45)']], hoverinfo: 'skip'
       }
     ], {
-      margin: { l: 45, r: 65, t: 120, b: 45 },
-      xaxis: { title: 'RSI Threshold', tickfont: {size:12}, titlefont:{size:12} },
-      yaxis: { title: 'Lookback (days)', tickfont: {size:12}, titlefont:{size:12} },
-      annotations
+      margin: { l: 30, r: 65, t: 15, b: 45 },
+      xaxis: { title: '', tickfont: {size:12}, titlefont:{size:12} },
+      yaxis: { title: '', tickfont: {size:12}, titlefont:{size:12} },
+      annotations: []
     }, { responsive: true });
 
+    // --- Colorbar min/max event handlers
     setTimeout(() => {
       const minInput = document.getElementById(`colorbar-min-${plotIdx}`);
       const maxInput = document.getElementById(`colorbar-max-${plotIdx}`);
@@ -509,12 +487,14 @@ function drawHeatmaps() {
       };
     }, 0);
 
-    const hoverX = section.querySelector(`#hoverX-${plotIdx}`);
-    const hoverY = section.querySelector(`#hoverY-${plotIdx}`);
+    // --- Custom crosshair values (RSI and Days)
+    const hoverX = section.querySelector(`#hoverXValue-${plotIdx}`);
+    const hoverY = section.querySelector(`#hoverYValue-${plotIdx}`);
+
     heatDiv.on('plotly_hover', function(eventData) {
       var pt = eventData.points[0];
-      hoverX.innerText = 'RSI: ' + pt.x;
-      hoverY.innerText = 'Day: ' + pt.y;
+      hoverX.innerText = pt.x;
+      hoverY.innerText = pt.y;
     });
     heatDiv.on('plotly_unhover', function() {
       hoverX.innerText = '';
@@ -524,6 +504,7 @@ function drawHeatmaps() {
   if (overallMaxH === -Infinity) currentMaxH.textContent = 'Current Max H: --';
   else currentMaxH.textContent = 'Current Max H: ' + overallMaxH.toFixed(3);
 }
+
 
 
 
