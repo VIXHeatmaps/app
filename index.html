@@ -399,7 +399,7 @@ window.addEventListener('click', function(event) {
     mdCeil.value = mdCeilNum.value = el.value; drawHeatmaps();
   });
 
-// 5.10: Draw Heatmaps (with TickerNames, custom axes, and improved axis label fonts)
+// 5.10: Draw Heatmaps (with TickerNames, custom axes, and improved axis label placement)
 function drawHeatmaps() {
   heatmapsContainer.innerHTML = '';
   if (!selectedSymbols.length) {
@@ -466,7 +466,7 @@ function drawHeatmaps() {
           <!-- Y Axis Hover (Days) -->
           <div id="yHoverBox-${plotIdx}" style="width:45px; display:flex; flex-direction:column; align-items:center; justify-content:center; height:56vh;">
             <span style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; writing-mode: vertical-lr; transform: rotate(180deg); font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; letter-spacing:0.5px;">
-              <span id="hoverYValue-${plotIdx}" style="font-size:19px; font-weight:700; color:#253358; min-height:18px; margin-bottom:2px;"></span>
+              <span id="hoverYValue-${plotIdx}" style="font-size:19px; font-weight:700; color:#253358; min-height:18px; margin-bottom:6px;"></span>
               <span style="font-size:16px; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; font-weight:300; color:#3e5678; margin-top:0;">Days</span>
             </span>
           </div>
