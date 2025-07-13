@@ -98,19 +98,20 @@
         </div>
         <button id="clearDataBtn" style="margin-left:8px;">Clear Data</button>
       </div>
-      <!-- 2.3: Filters -->
-      <div><b>AR Min. (%):</b>
-        <input type="range" id="arFloor" min="0" max="100" step="0.1" value="3" style="width:110px;vertical-align:middle;">
-        <input type="number" id="arFloorNum" min="0" max="100" step="0.1" value="3" style="width:35px;">
-      </div>
-      <div><b>MD Min. (%):</b>
-        <input type="range" id="mdMin" min="0" max="100" step="0.1" value="5" style="width:110px;vertical-align:middle;">
-        <input type="number" id="mdMinNum" min="0" max="100" step="0.1" value="5" style="width:35px;">
-      </div>
-      <div><b>MD Max (%):</b>
-        <input type="range" id="mdCeil" min="0" max="100" step="0.1" value="50" style="width:110px;vertical-align:middle;">
-        <input type="number" id="mdCeilNum" min="0" max="100" step="0.1" value="50" style="width:35px;">
-      </div>
+     <!-- 2.3: Filters -->
+<div><b>AR Min. (%):</b>
+  <input type="range" id="arFloor" min="0" max="100" step="0.1" value="1" style="width:110px;vertical-align:middle;">
+  <input type="number" id="arFloorNum" min="0" max="100" step="0.1" value="1" style="width:35px;">
+</div>
+<div><b>MD Min. (%):</b>
+  <input type="range" id="mdMin" min="0" max="100" step="0.1" value="3" style="width:110px;vertical-align:middle;">
+  <input type="number" id="mdMinNum" min="0" max="100" step="0.1" value="3" style="width:35px;">
+</div>
+<div><b>MD Max (%):</b>
+  <input type="range" id="mdCeil" min="0" max="100" step="0.1" value="20" style="width:110px;vertical-align:middle;">
+  <input type="number" id="mdCeilNum" min="0" max="100" step="0.1" value="20" style="width:35px;">
+</div>
+
       <!-- 2.4: Current MaxH Display -->
       <span id="currentMaxH" class="currentMaxH-label">Current Max H: --</span>
     </div>
