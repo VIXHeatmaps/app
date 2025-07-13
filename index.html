@@ -363,7 +363,7 @@
     mdCeil.value = mdCeilNum.value = el.value; drawHeatmaps();
   });
 
-// 5.10: Draw Heatmaps (with TickerNames, uniform axes, and improved number-label layout)
+// 5.10: Draw Heatmaps (with TickerNames, custom axes, and improved axis label fonts)
 function drawHeatmaps() {
   heatmapsContainer.innerHTML = '';
   if (!selectedSymbols.length) {
@@ -426,12 +426,12 @@ function drawHeatmaps() {
           <div style="font-size:18px;color:#1b365d;font-weight:500;margin-bottom:0px;">${symbolSource}</div>
           ${fundName ? `<div style="font-size:12px; color:#2e4057; margin-top:2px; margin-bottom:10px;">${fundName}</div>` : ""}
         </div>
-        <div style="display:flex; flex-direction:row; align-items:flex-start;">
-          <div id="yHoverBox-${plotIdx}" style="width:40px; display:flex; flex-direction:column; align-items:center; margin-top:15px;">
-            <span id="daysLabelBox-${plotIdx}" 
-                  style="font-size:18px; font-weight:600; color:#233A54; writing-mode:vertical-rl; text-align:center; height:120px; display:flex; flex-direction:column; justify-content:center;">
-              <span id="hoverYValue-${plotIdx}" style="font-size:18px; font-weight:600; color:#233A54; letter-spacing:1px;"></span>
-              <span style="font-size:18px; font-weight:600; color:#233A54;">Days</span>
+        <div style="display:flex; flex-direction:row; align-items:center;">
+          <!-- Y Axis Hover (Days) -->
+          <div id="yHoverBox-${plotIdx}" style="width:45px; display:flex; flex-direction:column; align-items:center; justify-content:center; height:56vh;">
+            <span style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; writing-mode: vertical-lr; transform: rotate(180deg); font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; letter-spacing:0.5px;">
+              <span id="hoverYValue-${plotIdx}" style="font-size:19px; font-weight:700; color:#253358; min-height:18px; margin-bottom:2px;"></span>
+              <span style="font-size:16px; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; font-weight:300; color:#3e5678; margin-top:0;">Days</span>
             </span>
           </div>
           <div style="flex:1;">
@@ -446,9 +446,10 @@ function drawHeatmaps() {
             </div>
           </div>
         </div>
-        <div style="display: flex; flex-direction:row; justify-content:center; align-items:center; margin-top:2px;">
-          <span style="font-size:18px; color:#233A54; font-weight:600; margin-right:4px;">RSI</span>
-          <span id="hoverXValue-${plotIdx}" style="font-size:18px; font-weight:600; color:#233A54; min-width:24px; text-align:left;"></span>
+        <!-- X Axis Hover (RSI) -->
+        <div style="display: flex; flex-direction:column; align-items:center; margin-top:2px;">
+          <span style="font-size:16px; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; font-weight:300; color:#3e5678; margin-bottom:0; letter-spacing:0.5px;">RSI</span>
+          <span id="hoverXValue-${plotIdx}" style="font-size:19px; font-weight:700; color:#253358; min-height:18px;"></span>
         </div>
       </div>
     `;
@@ -509,11 +510,6 @@ function drawHeatmaps() {
   if (overallMaxH === -Infinity) currentMaxH.textContent = 'Current Max H: --';
   else currentMaxH.textContent = 'Current Max H: ' + overallMaxH.toFixed(3);
 }
-
-
-
-
-
 
 
   // 5.11: Compute H Function
