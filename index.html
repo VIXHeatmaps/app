@@ -84,10 +84,18 @@
   <!-- Chapter 2: LAYOUT & CONTROLS -->
   <div style="display: flex; justify-content: space-between; align-items: flex-start;">
     <div class="controls">
-    <!-- 2.1: Metric Display -->
-<div style="font-size: 14px; font-style: italic; margin-bottom: 10px;">
-  <b>Metric:</b> H = (AR – AR<sub>min</sub>) / max(MD, MD<sub>min</sub>)
+   <!-- 2.1: Metric Display (with Read Me button) -->
+<div style="font-size: 14px; font-style: italic; margin-bottom: 10px; display:flex; align-items:center;">
+  <div>
+    <b>Metric:</b>
+    H = (AR – AR<sub>min</sub>) / max(MD, MD<sub>min</sub>)
+  </div>
+  <button id="readMeBtn"
+    style="margin-left:16px; font-size:13px; background:#f8f8f8; border:1px solid #bcbcbc; border-radius:6px; padding:2px 14px; cursor:pointer; font-weight:500;">
+    Read Me
+  </button>
 </div>
+
 
       <!-- 2.2: Symbol MultiSelect -->
       <div style="font-weight:bold; margin-bottom:6px;">
@@ -158,6 +166,13 @@
     </div>
   </div>
   <!-- End Chapter 3 -->
+<!-- 3.1: READ ME MODAL -->
+<div id="readMeModal" style="display:none; position:fixed; z-index:20; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.19); align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:7px; max-width:650px; width:95vw; box-shadow:0 2px 12px rgba(0,0,0,0.10); padding:18px 20px 16px 20px; font-size:15px; line-height:1.5; position:relative;">
+    <button id="closeReadMeBtn" style="position:absolute; top:12px; right:14px; background:none; border:none; font-size:20px; color:#888; cursor:pointer;">&times;</button>
+    <div id="readMeContent" style="white-space:pre-wrap;"></div>
+  </div>
+</div>
 
   <!-- Chapter 4: HEATMAP CONTAINER -->
   <div id="heatmapsContainer" style="margin-top:18px;"></div>
@@ -177,6 +192,27 @@
       document.getElementById('csvModal').style.display = 'none';
     }
   };
+// 5.1.1: Read Me Modal Logic
+document.getElementById('readMeBtn').onclick = async function() {
+  // Show modal immediately (loads content in background)
+  document.getElementById('readMeModal').style.display = 'flex';
+  document.getElementById('readMeContent').textContent = 'Loading...';
+  try {
+    const resp = await fetch('data/ReadMe.txt');
+    if (!resp.ok) throw new Error('File not found');
+    const text = await resp.text();
+    document.getElementById('readMeContent').textContent = text;
+  } catch (e) {
+    document.getElementById('readMeContent').textContent = "Could not load ReadMe.txt";
+  }
+};
+document.getElementById('closeReadMeBtn').onclick = function() {
+  document.getElementById('readMeModal').style.display = 'none';
+};
+window.addEventListener('click', function(event) {
+  const modal = document.getElementById('readMeModal');
+  if (event.target === modal) modal.style.display = 'none';
+});
 
   // 5.2: GLOBAL STATE
   window.allData = [];
