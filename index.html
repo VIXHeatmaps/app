@@ -313,16 +313,16 @@ const csvInput = document.getElementById('csvInput'),
     else symbolMultiSelectLabel.innerText = `${selectedSymbols.length} symbols`;
   }
 
-  // 5.5: Clear Data
-  clearDataBtn.addEventListener('click', () => {
-    window.allData = [];
-    selectedSymbols = [];
-    allSymbolList = [];
-    symbolMultiSelectList.innerHTML = '';
-    updateSymbolLabel();
-    heatmapsContainer.innerHTML = '';
-    currentMaxH.textContent = 'Current Max H: --';
-  });
+ // 5.5: Clear Data
+clearDataBtn.addEventListener('click', () => {
+  window.allData = [];
+  selectedSymbols = [];
+  allSymbolList = [];
+  symbolMultiSelectList.innerHTML = '';
+  updateSymbolLabel();
+  heatmapsContainer.innerHTML = '';
+});
+
 
   // 5.6: Load TickerNames.csv on page load
   async function loadTickerNames() {
