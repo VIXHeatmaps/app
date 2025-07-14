@@ -419,7 +419,10 @@ clearDataBtn.addEventListener('click', () => {
     mdCeil.value = mdCeilNum.value = el.value; drawHeatmaps();
   });
 
-// 5.10: Draw Heatmaps (with TickerNames, custom axes, improved axis label placement, and per-heatmap Max H)
+// 5.10: Draw Heatmaps (with TickerNames, custom axes, improved axis label placement, per-heatmap Max H, and GLOBAL colorbar min/max)
+window.colorbarMinGlobal = -1;  // Default min value
+window.colorbarMaxGlobal = 1;   // Default max value
+
 function drawHeatmaps() {
   heatmapsContainer.innerHTML = '';
   if (!selectedSymbols.length) {
@@ -457,10 +460,9 @@ function drawHeatmaps() {
     const floor = +arFloor.value;
     const minMD = +mdMin.value;
     const ceilMD = +mdCeil.value;
-    const colorbarMinKey = "colorbarMin-" + plotIdx;
-    const colorbarMaxKey = "colorbarMax-" + plotIdx;
-    let zminVal = window[colorbarMinKey] !== undefined ? window[colorbarMinKey] : -1;
-    let zmaxVal = window[colorbarMaxKey] !== undefined ? window[colorbarMaxKey] : 1;
+    // GLOBAL colorbar min/max for ALL heatmaps
+    let zminVal = window.colorbarMinGlobal;
+    let zmaxVal = window.colorbarMaxGlobal;
     const H = computeH(arM, mdM, floor, minMD);
     const EPSILON = 1e-6;
     let mask;
@@ -535,18 +537,29 @@ function drawHeatmaps() {
       annotations: []
     }, { responsive: true });
 
-    // --- Colorbar min/max event handlers
+    // --- GLOBAL colorbar min/max event handlers (sync all boxes, update all charts)
     setTimeout(() => {
       const minInput = document.getElementById(`colorbar-min-${plotIdx}`);
       const maxInput = document.getElementById(`colorbar-max-${plotIdx}`);
+
       minInput.onchange = function() {
-        window[colorbarMinKey] = Number(minInput.value);
+        window.colorbarMinGlobal = Number(minInput.value);
+        // sync all input boxes to the same global value
+        document.querySelectorAll('.colorbar-input[id^="colorbar-min-"]').forEach(inp => inp.value = window.colorbarMinGlobal);
         drawHeatmaps();
       };
       maxInput.onchange = function() {
-        window[colorbarMaxKey] = Number(maxInput.value);
+        window.colorbarMaxGlobal = Number(maxInput.value);
+        document.querySelectorAll('.colorbar-input[id^="colorbar-max-"]').forEach(inp => inp.value = window.colorbarMaxGlobal);
         drawHeatmaps();
       };
+      // If user blurs (clicks away), always sync
+      minInput.onblur = function() {
+        document.querySelectorAll('.colorbar-input[id^="colorbar-min-"]').forEach(inp => inp.value = window.colorbarMinGlobal);
+      }
+      maxInput.onblur = function() {
+        document.querySelectorAll('.colorbar-input[id^="colorbar-max-"]').forEach(inp => inp.value = window.colorbarMaxGlobal);
+      }
     }, 0);
 
     // --- Custom crosshair values (RSI and Days)
@@ -564,6 +577,7 @@ function drawHeatmaps() {
     });
   });
 }
+
 
 
 
