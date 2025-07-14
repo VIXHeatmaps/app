@@ -3,7 +3,6 @@
 <head>
   <meta charset="utf-8">
   <title>Heatmap Viewer</title>
-
   <!-- Chapter 1: LIBRARIES & CSS -->
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
@@ -77,7 +76,6 @@
     }
   </style>
   <!-- End Chapter 1 -->
-
 </head>
 <body>
 
@@ -147,8 +145,6 @@
 </div>
 <!-- End Chapter 2 -->
 
-
-
   <!-- Chapter 3: CSV MODAL -->
   <div id="csvModal">
     <div class="modal-content">
@@ -198,7 +194,7 @@ document.getElementById('readMeBtn').onclick = async function() {
   document.getElementById('readMeModal').style.display = 'flex';
   document.getElementById('readMeContent').textContent = 'Loading...';
   try {
-    const resp = await fetch('data/ReadMe.txt');
+    const resp = await fetch('/app/data/ReadMe.txt');
     if (!resp.ok) throw new Error('File not found');
     const text = await resp.text();
     document.getElementById('readMeContent').textContent = text;
@@ -320,20 +316,16 @@ function updateSymbolLabel() {
 // New: Select All and Unselect All button logic
 selectAllBtn.addEventListener('click', () => {
   selectedSymbols = [...allSymbolList];
-  // Check all checkboxes in the symbolMultiSelectList
   symbolMultiSelectList.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = true; });
   updateSymbolLabel();
   drawHeatmaps();
 });
-
 unselectAllBtn.addEventListener('click', () => {
   selectedSymbols = [];
-  // Uncheck all checkboxes in the symbolMultiSelectList
   symbolMultiSelectList.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = false; });
   updateSymbolLabel();
   drawHeatmaps();
 });
-
 
  // 5.5: Clear Data
 clearDataBtn.addEventListener('click', () => {
@@ -345,11 +337,10 @@ clearDataBtn.addEventListener('click', () => {
   heatmapsContainer.innerHTML = '';
 });
 
-
   // 5.6: Load TickerNames.csv on page load
   async function loadTickerNames() {
     try {
-      const resp = await fetch('data/TickerNames.csv');
+      const resp = await fetch('/app/data/TickerNames.csv');
       if (!resp.ok) throw new Error('TickerNames.csv not found');
       const csv = await resp.text();
       csv.split(/\r?\n/).forEach((line, i) => {
@@ -367,7 +358,7 @@ clearDataBtn.addEventListener('click', () => {
     await loadTickerNames();
     let filesToFetch = [];
     for (let i = 1; i <= 20; i++) {
-      filesToFetch.push(`data/LoadData${i}.csv`);
+      filesToFetch.push(`/app/data/LoadData${i}.csv`);
     }
     let filesLoaded = 0;
     let atLeastOneLoaded = false;
@@ -379,7 +370,7 @@ clearDataBtn.addEventListener('click', () => {
         })
         .then(csvText => {
           atLeastOneLoaded = true;
-          let shortName = filename.replace(/^data\/|\.csv$/g, '');
+          let shortName = filename.replace(/^\/app\/data\/|\.csv$/g, '');
           buildFromText(csvText, shortName);
         })
         .catch(error => {
@@ -420,8 +411,8 @@ clearDataBtn.addEventListener('click', () => {
   });
 
 // 5.10: Draw Heatmaps (with TickerNames, custom axes, improved axis label placement, per-heatmap Max H, and GLOBAL colorbar min/max)
-window.colorbarMinGlobal = -1;  // Default min value
-window.colorbarMaxGlobal = 1;   // Default max value
+window.colorbarMinGlobal = -1;
+window.colorbarMaxGlobal = 1;
 
 function drawHeatmaps() {
   heatmapsContainer.innerHTML = '';
@@ -460,7 +451,6 @@ function drawHeatmaps() {
     const floor = +arFloor.value;
     const minMD = +mdMin.value;
     const ceilMD = +mdCeil.value;
-    // GLOBAL colorbar min/max for ALL heatmaps
     let zminVal = window.colorbarMinGlobal;
     let zmaxVal = window.colorbarMaxGlobal;
     const H = computeH(arM, mdM, floor, minMD);
@@ -544,7 +534,6 @@ function drawHeatmaps() {
 
       minInput.onchange = function() {
         window.colorbarMinGlobal = Number(minInput.value);
-        // sync all input boxes to the same global value
         document.querySelectorAll('.colorbar-input[id^="colorbar-min-"]').forEach(inp => inp.value = window.colorbarMinGlobal);
         drawHeatmaps();
       };
@@ -553,7 +542,6 @@ function drawHeatmaps() {
         document.querySelectorAll('.colorbar-input[id^="colorbar-max-"]').forEach(inp => inp.value = window.colorbarMaxGlobal);
         drawHeatmaps();
       };
-      // If user blurs (clicks away), always sync
       minInput.onblur = function() {
         document.querySelectorAll('.colorbar-input[id^="colorbar-min-"]').forEach(inp => inp.value = window.colorbarMinGlobal);
       }
@@ -577,9 +565,6 @@ function drawHeatmaps() {
     });
   });
 }
-
-
-
 
   // 5.11: Compute H Function
   function computeH(ar, md, floor, minMD) {
@@ -688,8 +673,5 @@ function drawHeatmaps() {
   }
 </script>
 <!-- End Chapter 5: MAIN SCRIPT -->
-
-
 </body>
 </html>
-
