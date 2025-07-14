@@ -81,7 +81,7 @@
 </head>
 <body>
 
- <!-- Chapter 2: LAYOUT & CONTROLS -->
+<!-- Chapter 2: LAYOUT & CONTROLS -->
 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
   <div class="controls">
     <!-- 2.1: Metric Display (with Read Me button) -->
@@ -96,13 +96,15 @@
       </button>
     </div>
 
-    <!-- 2.2: Symbol MultiSelect -->
+    <!-- 2.2: Symbol MultiSelect (with Select All/Unselect All) -->
     <div style="font-weight:bold; margin-bottom:6px;">
       Symbol:
       <div class="symbol-multiselect" id="symbolMultiSelectBox">
         <div class="selected-label" tabindex="0" id="symbolMultiSelectLabel">Select Symbol</div>
         <div class="symbol-multiselect-list" id="symbolMultiSelectList" style="display:none;"></div>
       </div>
+      <button id="selectAllBtn" style="margin-left:8px;">Select All</button>
+      <button id="unselectAllBtn" style="margin-left:3px;">Unselect All</button>
       <button id="clearDataBtn" style="margin-left:8px;">Clear Data</button>
     </div>
     <!-- 2.3: Filters -->
@@ -118,7 +120,6 @@
       <input type="range" id="mdCeil" min="0" max="100" step="0.1" value="20" style="width:110px;vertical-align:middle;">
       <input type="number" id="mdCeilNum" min="0" max="100" step="0.1" value="20" style="width:35px;">
     </div>
-    <!-- 2.4: Current MaxH Display is REMOVED -->
   </div>
   <!-- 2.5: Right Controls -->
   <div class="right-controls">
@@ -145,6 +146,7 @@
   </div>
 </div>
 <!-- End Chapter 2 -->
+
 
 
   <!-- Chapter 3: CSV MODAL -->
@@ -234,84 +236,104 @@ const csvInput = document.getElementById('csvInput'),
       heatmapsContainer = document.getElementById('heatmapsContainer');
 
 
-  // 5.4: Symbol Multiselect Logic
-  const symbolMultiSelectBox = document.getElementById('symbolMultiSelectBox');
-  const symbolMultiSelectLabel = document.getElementById('symbolMultiSelectLabel');
-  const symbolMultiSelectList = document.getElementById('symbolMultiSelectList');
+// 5.4: Symbol Multiselect Logic (with Select All / Unselect All)
+const symbolMultiSelectBox = document.getElementById('symbolMultiSelectBox');
+const symbolMultiSelectLabel = document.getElementById('symbolMultiSelectLabel');
+const symbolMultiSelectList = document.getElementById('symbolMultiSelectList');
+const selectAllBtn = document.getElementById('selectAllBtn');
+const unselectAllBtn = document.getElementById('unselectAllBtn');
 
-  function getUniqueSymbolSources() {
-    if (!Array.isArray(window.allData)) return [];
-    const seen = new Set();
-    const combos = [];
-    window.allData.forEach(row => {
-      const key = `${row.symbol} (${row.source})`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        combos.push(key);
-      }
-    });
-    return combos;
-  }
-
-  function populateSymbols() {
-    allSymbolList = getUniqueSymbolSources();
-    selectedSymbols = [];
-    symbolMultiSelectList.innerHTML = '';
-    allSymbolList.forEach((sym, idx) => {
-      const id = `multisym-${idx}`;
-      const label = document.createElement('label');
-      label.innerHTML = `<input type="checkbox" id="${id}" value="${sym}"> ${sym}`;
-      symbolMultiSelectList.appendChild(label);
-    });
-    // Auto-select first symbol and update UI
-    if (allSymbolList.length) {
-      selectedSymbols = [allSymbolList[0]];
-      symbolMultiSelectList.querySelector('input').checked = true;
-      updateSymbolLabel();
-      drawHeatmaps();
-    } else {
-      updateSymbolLabel();
-      drawHeatmaps();
+function getUniqueSymbolSources() {
+  if (!Array.isArray(window.allData)) return [];
+  const seen = new Set();
+  const combos = [];
+  window.allData.forEach(row => {
+    const key = `${row.symbol} (${row.source})`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      combos.push(key);
     }
-  }
-
-  function openSymbolList() {
-    symbolMultiSelectList.style.display = 'block';
-    symbolMultiSelectBox.classList.add('open');
-    symbolMultiSelectLabel.focus();
-  }
-  function closeSymbolList() {
-    symbolMultiSelectList.style.display = 'none';
-    symbolMultiSelectBox.classList.remove('open');
-  }
-  symbolMultiSelectLabel.onclick = () => {
-    if (symbolMultiSelectList.style.display === 'block') closeSymbolList();
-    else openSymbolList();
-  };
-  symbolMultiSelectLabel.onkeydown = (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault(); openSymbolList();
-    }
-  };
-  symbolMultiSelectList.onclick = (e) => {
-    if (e.target.tagName === "INPUT") {
-      const sym = e.target.value;
-      if (e.target.checked) {
-        if (!selectedSymbols.includes(sym)) selectedSymbols.push(sym);
-      } else {
-        selectedSymbols = selectedSymbols.filter(s => s !== sym);
-      }
-      updateSymbolLabel(); drawHeatmaps();
-    }
-  };
-  document.addEventListener('mousedown', (e) => {
-    if (!symbolMultiSelectBox.contains(e.target)) closeSymbolList();
   });
-  function updateSymbolLabel() {
-    if (selectedSymbols.length === 0) symbolMultiSelectLabel.innerText = "Select Symbol";
-    else if (selectedSymbols.length === 1) symbolMultiSelectLabel.innerText = selectedSymbols[0];
-    else symbolMultiSelectLabel.innerText = `${selectedSymbols.length} symbols`;
+  return combos;
+}
+
+function populateSymbols() {
+  allSymbolList = getUniqueSymbolSources();
+  selectedSymbols = [];
+  symbolMultiSelectList.innerHTML = '';
+  allSymbolList.forEach((sym, idx) => {
+    const id = `multisym-${idx}`;
+    const label = document.createElement('label');
+    label.innerHTML = `<input type="checkbox" id="${id}" value="${sym}"> ${sym}`;
+    symbolMultiSelectList.appendChild(label);
+  });
+  // Auto-select first symbol and update UI
+  if (allSymbolList.length) {
+    selectedSymbols = [allSymbolList[0]];
+    symbolMultiSelectList.querySelector('input').checked = true;
+    updateSymbolLabel();
+    drawHeatmaps();
+  } else {
+    updateSymbolLabel();
+    drawHeatmaps();
   }
+}
+
+function openSymbolList() {
+  symbolMultiSelectList.style.display = 'block';
+  symbolMultiSelectBox.classList.add('open');
+  symbolMultiSelectLabel.focus();
+}
+function closeSymbolList() {
+  symbolMultiSelectList.style.display = 'none';
+  symbolMultiSelectBox.classList.remove('open');
+}
+symbolMultiSelectLabel.onclick = () => {
+  if (symbolMultiSelectList.style.display === 'block') closeSymbolList();
+  else openSymbolList();
+};
+symbolMultiSelectLabel.onkeydown = (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault(); openSymbolList();
+  }
+};
+symbolMultiSelectList.onclick = (e) => {
+  if (e.target.tagName === "INPUT") {
+    const sym = e.target.value;
+    if (e.target.checked) {
+      if (!selectedSymbols.includes(sym)) selectedSymbols.push(sym);
+    } else {
+      selectedSymbols = selectedSymbols.filter(s => s !== sym);
+    }
+    updateSymbolLabel(); drawHeatmaps();
+  }
+};
+document.addEventListener('mousedown', (e) => {
+  if (!symbolMultiSelectBox.contains(e.target)) closeSymbolList();
+});
+function updateSymbolLabel() {
+  if (selectedSymbols.length === 0) symbolMultiSelectLabel.innerText = "Select Symbol";
+  else if (selectedSymbols.length === 1) symbolMultiSelectLabel.innerText = selectedSymbols[0];
+  else symbolMultiSelectLabel.innerText = `${selectedSymbols.length} symbols`;
+}
+
+// New: Select All and Unselect All button logic
+selectAllBtn.addEventListener('click', () => {
+  selectedSymbols = [...allSymbolList];
+  // Check all checkboxes in the symbolMultiSelectList
+  symbolMultiSelectList.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = true; });
+  updateSymbolLabel();
+  drawHeatmaps();
+});
+
+unselectAllBtn.addEventListener('click', () => {
+  selectedSymbols = [];
+  // Uncheck all checkboxes in the symbolMultiSelectList
+  symbolMultiSelectList.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = false; });
+  updateSymbolLabel();
+  drawHeatmaps();
+});
+
 
  // 5.5: Clear Data
 clearDataBtn.addEventListener('click', () => {
