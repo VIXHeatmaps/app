@@ -399,7 +399,7 @@ window.addEventListener('click', function(event) {
     mdCeil.value = mdCeilNum.value = el.value; drawHeatmaps();
   });
 
-// 5.10: Draw Heatmaps (with TickerNames, custom axes, and improved axis label placement)
+// 5.10: Draw Heatmaps (with TickerNames, custom axes, improved axis label placement, and per-heatmap Max H)
 function drawHeatmaps() {
   heatmapsContainer.innerHTML = '';
   if (!selectedSymbols.length) {
@@ -452,7 +452,7 @@ function drawHeatmaps() {
     H.forEach(row => row.forEach(v => { if (v != null && v > maxH) maxH = v; }));
     if (maxH > overallMaxH) overallMaxH = maxH;
 
-    // --- Layout: Fund name between ticker/source and heatmap
+    // --- Layout: Fund name between ticker/source and heatmap, plus per-heatmap Max H
     const fundName = tickerNameMap[symbol] || "";
     section = document.createElement('div');
     section.className = 'heatmap-section';
@@ -460,7 +460,8 @@ function drawHeatmaps() {
       <div style="position:relative;">
         <div id="heatmap-title-${plotIdx}" style="text-align:center;">
           <div style="font-size:18px;color:#1b365d;font-weight:500;margin-bottom:0px;">${symbolSource}</div>
-          ${fundName ? `<div style="font-size:12px; color:#2e4057; margin-top:2px; margin-bottom:10px;">${fundName}</div>` : ""}
+          ${fundName ? `<div style="font-size:12px; color:#2e4057; margin-top:2px; margin-bottom:5px;">${fundName}</div>` : ""}
+          <div style="font-size:12px; font-weight:bold; color:#1e522e; margin-bottom:8px;">Current Max H: ${maxH === -Infinity ? '--' : maxH.toFixed(3)}</div>
         </div>
         <div style="display:flex; flex-direction:row; align-items:center;">
           <!-- Y Axis Hover (Days, with number ABOVE the word) -->
@@ -546,6 +547,7 @@ function drawHeatmaps() {
   if (overallMaxH === -Infinity) currentMaxH.textContent = 'Current Max H: --';
   else currentMaxH.textContent = 'Current Max H: ' + overallMaxH.toFixed(3);
 }
+
 
 
   // 5.11: Compute H Function
