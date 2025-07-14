@@ -81,73 +81,71 @@
 </head>
 <body>
 
-  <!-- Chapter 2: LAYOUT & CONTROLS -->
-  <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-    <div class="controls">
-   <!-- 2.1: Metric Display (with Read Me button) -->
-<div style="font-size: 14px; font-style: italic; margin-bottom: 10px; display:flex; align-items:center;">
-  <div>
-    <b>Metric:</b>
-    H = (AR – AR<sub>min</sub>) / max(MD, MD<sub>min</sub>)
-  </div>
-  <button id="readMeBtn"
-    style="margin-left:16px; font-size:13px; background:#f8f8f8; border:1px solid #bcbcbc; border-radius:6px; padding:2px 14px; cursor:pointer; font-weight:500;">
-    Read Me
-  </button>
-</div>
-
-
-      <!-- 2.2: Symbol MultiSelect -->
-      <div style="font-weight:bold; margin-bottom:6px;">
-        Symbol:
-        <div class="symbol-multiselect" id="symbolMultiSelectBox">
-          <div class="selected-label" tabindex="0" id="symbolMultiSelectLabel">Select Symbol</div>
-          <div class="symbol-multiselect-list" id="symbolMultiSelectList" style="display:none;"></div>
-        </div>
-        <button id="clearDataBtn" style="margin-left:8px;">Clear Data</button>
+ <!-- Chapter 2: LAYOUT & CONTROLS -->
+<div style="display: flex; justify-content: space-between; align-items: flex-start;">
+  <div class="controls">
+    <!-- 2.1: Metric Display (with Read Me button) -->
+    <div style="font-size: 14px; font-style: italic; margin-bottom: 10px; display:flex; align-items:center;">
+      <div>
+        <b>Metric:</b>
+        H = (AR – AR<sub>min</sub>) / max(MD, MD<sub>min</sub>)
       </div>
-     <!-- 2.3: Filters -->
-<div><b>AR Min. (%):</b>
-  <input type="range" id="arFloor" min="0" max="100" step="0.1" value="1" style="width:110px;vertical-align:middle;">
-  <input type="number" id="arFloorNum" min="0" max="100" step="0.1" value="1" style="width:35px;">
-</div>
-<div><b>MD Min. (%):</b>
-  <input type="range" id="mdMin" min="0" max="100" step="0.1" value="3" style="width:110px;vertical-align:middle;">
-  <input type="number" id="mdMinNum" min="0" max="100" step="0.1" value="3" style="width:35px;">
-</div>
-<div><b>MD Max (%):</b>
-  <input type="range" id="mdCeil" min="0" max="100" step="0.1" value="20" style="width:110px;vertical-align:middle;">
-  <input type="number" id="mdCeilNum" min="0" max="100" step="0.1" value="20" style="width:35px;">
-</div>
-
-      <!-- 2.4: Current MaxH Display -->
-      <span id="currentMaxH" class="currentMaxH-label">Current Max H: --</span>
+      <button id="readMeBtn"
+        style="margin-left:16px; font-size:13px; background:#f8f8f8; border:1px solid #bcbcbc; border-radius:6px; padding:2px 14px; cursor:pointer; font-weight:500;">
+        Read Me
+      </button>
     </div>
-    <!-- 2.5: Right Controls -->
-    <div class="right-controls">
-      <div class="rc-row">
-        <label for="dataSourceSelect">Data Source:</label>
-        <select id="dataSourceSelect">
-          <option>Exxahub</option>
-          <option>Testfol.io</option>
-          <option>Composer</option>
-          <option>Quantmage</option>
-          <option>Other</option>
-        </select>
+
+    <!-- 2.2: Symbol MultiSelect -->
+    <div style="font-weight:bold; margin-bottom:6px;">
+      Symbol:
+      <div class="symbol-multiselect" id="symbolMultiSelectBox">
+        <div class="selected-label" tabindex="0" id="symbolMultiSelectLabel">Select Symbol</div>
+        <div class="symbol-multiselect-list" id="symbolMultiSelectList" style="display:none;"></div>
       </div>
-      <div class="rc-row">
-        <label style="font-weight: bold;">Upload <span class="csv-link" id="showCsvTemplate">CSV</span>:</label>
-        <input type="file" id="csvInput" accept=".csv">
-      </div>
-      <div class="rc-row">
-        <input type="checkbox" id="decimalToPercentBox">
-        <label for="decimalToPercentBox" style="font-weight:normal; margin-left:2px;">Decimal → %</label>
-        <span class="select-note">(select prior to upload)</span>
-      </div>
-      <button id="exportCSVBtn" class="export-btn">Download Data</button>
+      <button id="clearDataBtn" style="margin-left:8px;">Clear Data</button>
     </div>
+    <!-- 2.3: Filters -->
+    <div><b>AR Min. (%):</b>
+      <input type="range" id="arFloor" min="0" max="100" step="0.1" value="1" style="width:110px;vertical-align:middle;">
+      <input type="number" id="arFloorNum" min="0" max="100" step="0.1" value="1" style="width:35px;">
+    </div>
+    <div><b>MD Min. (%):</b>
+      <input type="range" id="mdMin" min="0" max="100" step="0.1" value="3" style="width:110px;vertical-align:middle;">
+      <input type="number" id="mdMinNum" min="0" max="100" step="0.1" value="3" style="width:35px;">
+    </div>
+    <div><b>MD Max (%):</b>
+      <input type="range" id="mdCeil" min="0" max="100" step="0.1" value="20" style="width:110px;vertical-align:middle;">
+      <input type="number" id="mdCeilNum" min="0" max="100" step="0.1" value="20" style="width:35px;">
+    </div>
+    <!-- 2.4: Current MaxH Display is REMOVED -->
   </div>
-  <!-- End Chapter 2 -->
+  <!-- 2.5: Right Controls -->
+  <div class="right-controls">
+    <div class="rc-row">
+      <label for="dataSourceSelect">Data Source:</label>
+      <select id="dataSourceSelect">
+        <option>Exxahub</option>
+        <option>Testfol.io</option>
+        <option>Composer</option>
+        <option>Quantmage</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="rc-row">
+      <label style="font-weight: bold;">Upload <span class="csv-link" id="showCsvTemplate">CSV</span>:</label>
+      <input type="file" id="csvInput" accept=".csv">
+    </div>
+    <div class="rc-row">
+      <input type="checkbox" id="decimalToPercentBox">
+      <label for="decimalToPercentBox" style="font-weight:normal; margin-left:2px;">Decimal → %</label>
+      <span class="select-note">(select prior to upload)</span>
+    </div>
+    <button id="exportCSVBtn" class="export-btn">Download Data</button>
+  </div>
+</div>
+<!-- End Chapter 2 -->
+
 
   <!-- Chapter 3: CSV MODAL -->
   <div id="csvModal">
