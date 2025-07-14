@@ -121,7 +121,8 @@
 </div>
 
       <!-- 2.4: Current MaxH Display -->
-    
+      <span id="currentMaxH" class="currentMaxH-label">Current Max H: --</span>
+    </div>
     <!-- 2.5: Right Controls -->
     <div class="right-controls">
       <div class="rc-row">
@@ -220,10 +221,6 @@ window.addEventListener('click', function(event) {
   let allSymbolList = [];
   let tickerNameMap = {}; // Symbol -> Fund Name
 
-  window.colorbarMaxGlobal = 1;
-window.colorbarMinGlobal = -1;
-
-
   // 5.3: DOM References
   const csvInput = document.getElementById('csvInput'),
         arFloor = document.getElementById('arFloor'),
@@ -236,8 +233,8 @@ window.colorbarMinGlobal = -1;
         clearDataBtn = document.getElementById('clearDataBtn'),
         decimalToPercentBox = document.getElementById('decimalToPercentBox'),
         exportCSVBtn = document.getElementById('exportCSVBtn'),
-        heatmapsContainer = document.getElementById('heatmapsContainer');
-        
+        heatmapsContainer = document.getElementById('heatmapsContainer'),
+        currentMaxH = document.getElementById('currentMaxH');
 
   // 5.4: Symbol Multiselect Logic
   const symbolMultiSelectBox = document.getElementById('symbolMultiSelectBox');
@@ -326,7 +323,7 @@ window.colorbarMinGlobal = -1;
     symbolMultiSelectList.innerHTML = '';
     updateSymbolLabel();
     heatmapsContainer.innerHTML = '';
-    
+    currentMaxH.textContent = 'Current Max H: --';
   });
 
   // 5.6: Load TickerNames.csv on page load
@@ -406,7 +403,7 @@ window.colorbarMinGlobal = -1;
 function drawHeatmaps() {
   heatmapsContainer.innerHTML = '';
   if (!selectedSymbols.length) {
-    // No symbol selected
+    currentMaxH.textContent = 'Current Max H: --';
     const msg = document.createElement('div');
     msg.style.textAlign = 'center';
     msg.style.margin = '30px 0 30px 0';
@@ -416,8 +413,7 @@ function drawHeatmaps() {
     heatmapsContainer.appendChild(msg);
     return;
   }
-  let maxHList = []; // For per-heatmap Max H display
-
+  let overallMaxH = -Infinity;
   selectedSymbols.forEach((symbolSource, plotIdx) => {
     const match = symbolSource.match(/^(.*) \((.*)\)$/);
     if (!match) return;
@@ -442,11 +438,10 @@ function drawHeatmaps() {
     const floor = +arFloor.value;
     const minMD = +mdMin.value;
     const ceilMD = +mdCeil.value;
-
-    // Use global colorbar min/max for ALL heatmaps
-    let zminVal = window.colorbarMinGlobal;
-    let zmaxVal = window.colorbarMaxGlobal;
-
+    const colorbarMinKey = "colorbarMin-" + plotIdx;
+    const colorbarMaxKey = "colorbarMax-" + plotIdx;
+    let zminVal = window[colorbarMinKey] !== undefined ? window[colorbarMinKey] : -1;
+    let zmaxVal = window[colorbarMaxKey] !== undefined ? window[colorbarMaxKey] : 1;
     const H = computeH(arM, mdM, floor, minMD);
     const EPSILON = 1e-6;
     let mask;
@@ -455,9 +450,9 @@ function drawHeatmaps() {
     else mask = mdM.map(row => row.map(v => (v != null && v > ceilMD) ? 1 : 0));
     let maxH = -Infinity;
     H.forEach(row => row.forEach(v => { if (v != null && v > maxH) maxH = v; }));
-    maxHList.push({ idx: plotIdx, value: maxH });
+    if (maxH > overallMaxH) overallMaxH = maxH;
 
-    // --- Layout: Fund name between ticker/source and heatmap, plus Current Max H
+    // --- Layout: Fund name between ticker/source and heatmap
     const fundName = tickerNameMap[symbol] || "";
     section = document.createElement('div');
     section.className = 'heatmap-section';
@@ -465,8 +460,7 @@ function drawHeatmaps() {
       <div style="position:relative;">
         <div id="heatmap-title-${plotIdx}" style="text-align:center;">
           <div style="font-size:18px;color:#1b365d;font-weight:500;margin-bottom:0px;">${symbolSource}</div>
-          ${fundName ? `<div style="font-size:12px; color:#2e4057; margin-top:2px; margin-bottom:5px;">${fundName}</div>` : ""}
-          <div style="font-size:12px; font-weight:bold; color:#1e522e; margin-bottom:8px;">Current Max H: ${maxH === -Infinity ? '--' : maxH.toFixed(3)}</div>
+          ${fundName ? `<div style="font-size:12px; color:#2e4057; margin-top:2px; margin-bottom:10px;">${fundName}</div>` : ""}
         </div>
         <div style="display:flex; flex-direction:row; align-items:center;">
           <!-- Y Axis Hover (Days, with number ABOVE the word) -->
@@ -521,25 +515,18 @@ function drawHeatmaps() {
       annotations: []
     }, { responsive: true });
 
-    // --- Colorbar min/max event handlers (shared for ALL heatmaps)
+    // --- Colorbar min/max event handlers
     setTimeout(() => {
       const minInput = document.getElementById(`colorbar-min-${plotIdx}`);
       const maxInput = document.getElementById(`colorbar-max-${plotIdx}`);
       minInput.onchange = function() {
-        window.colorbarMinGlobal = Number(minInput.value);
+        window[colorbarMinKey] = Number(minInput.value);
         drawHeatmaps();
       };
       maxInput.onchange = function() {
-        window.colorbarMaxGlobal = Number(maxInput.value);
+        window[colorbarMaxKey] = Number(maxInput.value);
         drawHeatmaps();
       };
-      // If user types then blurs, sync all input boxes to the global value:
-      minInput.onblur = function() {
-        document.querySelectorAll('.colorbar-input[id^="colorbar-min-"]').forEach(inp => inp.value = window.colorbarMinGlobal);
-      }
-      maxInput.onblur = function() {
-        document.querySelectorAll('.colorbar-input[id^="colorbar-max-"]').forEach(inp => inp.value = window.colorbarMaxGlobal);
-      }
     }, 0);
 
     // --- Custom crosshair values (RSI and Days)
@@ -556,8 +543,9 @@ function drawHeatmaps() {
       hoverY.innerText = '';
     });
   });
+  if (overallMaxH === -Infinity) currentMaxH.textContent = 'Current Max H: --';
+  else currentMaxH.textContent = 'Current Max H: ' + overallMaxH.toFixed(3);
 }
-
 
 
   // 5.11: Compute H Function
@@ -671,3 +659,4 @@ function drawHeatmaps() {
 
 </body>
 </html>
+
