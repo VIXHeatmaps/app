@@ -219,20 +219,20 @@ window.addEventListener('click', function(event) {
   let allSymbolList = [];
   let tickerNameMap = {}; // Symbol -> Fund Name
 
-  // 5.3: DOM References
-  const csvInput = document.getElementById('csvInput'),
-        arFloor = document.getElementById('arFloor'),
-        arFloorNum = document.getElementById('arFloorNum'),
-        mdMin = document.getElementById('mdMin'),
-        mdMinNum = document.getElementById('mdMinNum'),
-        mdCeil = document.getElementById('mdCeil'),
-        mdCeilNum = document.getElementById('mdCeilNum'),
-        dataSourceSelect = document.getElementById('dataSourceSelect'),
-        clearDataBtn = document.getElementById('clearDataBtn'),
-        decimalToPercentBox = document.getElementById('decimalToPercentBox'),
-        exportCSVBtn = document.getElementById('exportCSVBtn'),
-        heatmapsContainer = document.getElementById('heatmapsContainer'),
-        currentMaxH = document.getElementById('currentMaxH');
+ // 5.3: DOM References
+const csvInput = document.getElementById('csvInput'),
+      arFloor = document.getElementById('arFloor'),
+      arFloorNum = document.getElementById('arFloorNum'),
+      mdMin = document.getElementById('mdMin'),
+      mdMinNum = document.getElementById('mdMinNum'),
+      mdCeil = document.getElementById('mdCeil'),
+      mdCeilNum = document.getElementById('mdCeilNum'),
+      dataSourceSelect = document.getElementById('dataSourceSelect'),
+      clearDataBtn = document.getElementById('clearDataBtn'),
+      decimalToPercentBox = document.getElementById('decimalToPercentBox'),
+      exportCSVBtn = document.getElementById('exportCSVBtn'),
+      heatmapsContainer = document.getElementById('heatmapsContainer');
+
 
   // 5.4: Symbol Multiselect Logic
   const symbolMultiSelectBox = document.getElementById('symbolMultiSelectBox');
