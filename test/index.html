@@ -248,51 +248,51 @@ const csvInput = document.getElementById('csvInput'),
       sortSymbolsBtn = document.getElementById('sortSymbolsBtn');
 
 
-  // 5.4: Symbol Multiselect Logic (with Select All / Unselect All)
-  const symbolMultiSelectBox = document.getElementById('symbolMultiSelectBox');
-  const symbolMultiSelectLabel = document.getElementById('symbolMultiSelectLabel');
-  const symbolMultiSelectList = document.getElementById('symbolMultiSelectList');
-  const selectAllBtn = document.getElementById('selectAllBtn');
-  const unselectAllBtn = document.getElementById('unselectAllBtn');
+// 5.4: Symbol Multiselect Logic (with Select All / Unselect All)
+const symbolMultiSelectBox = document.getElementById('symbolMultiSelectBox');
+const symbolMultiSelectLabel = document.getElementById('symbolMultiSelectLabel');
+const symbolMultiSelectList = document.getElementById('symbolMultiSelectList');
+const selectAllBtn = document.getElementById('selectAllBtn');
+const unselectAllBtn = document.getElementById('unselectAllBtn');
 
-  // 5.4.1: Sorting Logic
-  function getMaxHForSymbolSource(symbolSource) {
-    const match = symbolSource.match(/^(.*) \((.*)\)$/);
-    if (!match) return -Infinity;
-    const symbol = match[1];
-    const source = match[2];
-    const rows = window.allData.filter(r => r.symbol === symbol && r.source === source);
-    if (!rows.length) return -Infinity;
-    // Need to recompute H with current filter settings
-    const xs = Array.from(new Set(rows.map(r => r.rsi))).sort((a, b) => +a - +b);
-    const ys = Array.from(new Set(rows.map(r => r.day))).sort((a, b) => +a - +b);
-    const arM = ys.map(y => xs.map(x => {
-      const rec = rows.find(r => r.day === y && r.rsi === x);
-      return rec ? rec.ar : null;
-    }));
-    const mdM = ys.map(y => xs.map(x => {
-      const rec = rows.find(r => r.day === y && r.rsi === x);
-      return rec ? rec.md : null;
-    }));
-    const floor = +arFloor.value;
-    const minMD = +mdMin.value;
-    const H = computeH(arM, mdM, floor, minMD);
-    let maxH = -Infinity;
-    H.forEach(row => row.forEach(v => { if (v != null && v > maxH) maxH = v; }));
-    return maxH;
-  }
+// 5.4.1: Sorting Logic
+function getMaxHForSymbolSource(symbolSource) {
+  const match = symbolSource.match(/^(.*) \((.*)\)$/);
+  if (!match) return -Infinity;
+  const symbol = match[1];
+  const source = match[2];
+  const rows = window.allData.filter(r => r.symbol === symbol && r.source === source);
+  if (!rows.length) return -Infinity;
+  // Need to recompute H with current filter settings
+  const xs = Array.from(new Set(rows.map(r => r.rsi))).sort((a, b) => +a - +b);
+  const ys = Array.from(new Set(rows.map(r => r.day))).sort((a, b) => +a - +b);
+  const arM = ys.map(y => xs.map(x => {
+    const rec = rows.find(r => r.day === y && r.rsi === x);
+    return rec ? rec.ar : null;
+  }));
+  const mdM = ys.map(y => xs.map(x => {
+    const rec = rows.find(r => r.day === y && r.rsi === x);
+    return rec ? rec.md : null;
+  }));
+  const floor = +arFloor.value;
+  const minMD = +mdMin.value;
+  const H = computeH(arM, mdM, floor, minMD);
+  let maxH = -Infinity;
+  H.forEach(row => row.forEach(v => { if (v != null && v > maxH) maxH = v; }));
+  return maxH;
+}
 
-  function getSortedSymbolList() {
-    let baseList = getUniqueSymbolSources();
-    if (sortByMaxH) {
-      return baseList
-        .map(sym => ({ sym, maxH: getMaxHForSymbolSource(sym) }))
-        .sort((a, b) => b.maxH - a.maxH)
-        .map(obj => obj.sym);
-    } else {
-      return baseList.slice().sort((a, b) => a.localeCompare(b));
-    }
+function getSortedSymbolList() {
+  let baseList = getUniqueSymbolSources();
+  if (sortByMaxH) {
+    return baseList
+      .map(sym => ({ sym, maxH: getMaxHForSymbolSource(sym) }))
+      .sort((a, b) => b.maxH - a.maxH)
+      .map(obj => obj.sym);
+  } else {
+    return baseList.slice().sort((a, b) => a.localeCompare(b));
   }
+}
 
 // 5.4.2: Sort Button Event & Symbol Multiselect Logic
 
@@ -304,6 +304,39 @@ sortSymbolsBtn.addEventListener('click', () => {
   sortSymbolsBtn.textContent = sortByMaxH ? "A→Z" : "Sort by Max H";
   populateSymbols();
 });
+
+// --- Preserve selections when (re)populating symbol list ---
+function populateSymbols() {
+  // 1. Save current selection before rebuilding
+  const prevSelected = new Set(selectedSymbols);
+
+  // 2. Build sorted symbol list and clear old HTML
+  allSymbolList = getSortedSymbolList();
+  symbolMultiSelectList.innerHTML = '';
+  selectedSymbols = [];
+
+  // 3. Render options, restoring previously selected items
+  allSymbolList.forEach((sym, idx) => {
+    const id = `multisym-${idx}`;
+    const label = document.createElement('label');
+    label.innerHTML = `<input type="checkbox" id="${id}" value="${sym}"> ${sym}`;
+    const cb = label.querySelector('input');
+    if (prevSelected.has(sym)) {
+      cb.checked = true;
+      selectedSymbols.push(sym);
+    }
+    symbolMultiSelectList.appendChild(label);
+  });
+
+  // 4. If nothing is selected, select the first symbol
+  if (!selectedSymbols.length && allSymbolList.length) {
+    selectedSymbols = [allSymbolList[0]];
+    symbolMultiSelectList.querySelector('input').checked = true;
+  }
+
+  updateSymbolLabel();
+  drawHeatmaps();
+}
 
 function getUniqueSymbolSources() {
   if (!Array.isArray(window.allData)) return [];
@@ -317,28 +350,6 @@ function getUniqueSymbolSources() {
     }
   });
   return combos;
-}
-
-function populateSymbols() {
-  allSymbolList = getSortedSymbolList();
-  selectedSymbols = [];
-  symbolMultiSelectList.innerHTML = '';
-  allSymbolList.forEach((sym, idx) => {
-    const id = `multisym-${idx}`;
-    const label = document.createElement('label');
-    label.innerHTML = `<input type="checkbox" id="${id}" value="${sym}"> ${sym}`;
-    symbolMultiSelectList.appendChild(label);
-  });
-  // Auto-select first symbol and update UI
-  if (allSymbolList.length) {
-    selectedSymbols = [allSymbolList[0]];
-    symbolMultiSelectList.querySelector('input').checked = true;
-    updateSymbolLabel();
-    drawHeatmaps();
-  } else {
-    updateSymbolLabel();
-    drawHeatmaps();
-  }
 }
 
 function openSymbolList() {
@@ -392,6 +403,7 @@ unselectAllBtn.addEventListener('click', () => {
   updateSymbolLabel();
   drawHeatmaps();
 });
+
 
 
   // 5.5: Clear Data
