@@ -94,19 +94,19 @@
       </button>
     </div>
 
-    <!-- 2.2: Symbol MultiSelect (with Select All/Unselect All & Sort by Max H) -->
-    <div style="font-weight:bold; margin-bottom:6px;">
-      Symbol:
-      <div class="symbol-multiselect" id="symbolMultiSelectBox">
-        <div class="selected-label" tabindex="0" id="symbolMultiSelectLabel">Select Symbol</div>
-        <div class="symbol-multiselect-list" id="symbolMultiSelectList" style="display:none;"></div>
-      </div>
-      <button id="sortSymbolsBtn" style="margin-left:8px;">Sort by Max H</button>
-      <span id="sortModeLabel" style="font-size:11px; color:#777; margin-left:4px;">(A–Z)</span>
-      <button id="selectAllBtn" style="margin-left:8px;">Select All</button>
-      <button id="unselectAllBtn" style="margin-left:3px;">Unselect All</button>
-      <button id="clearDataBtn" style="margin-left:8px;">Clear Data</button>
-    </div>
+  <!-- 2.2: Symbol MultiSelect (with Select All/Unselect All & Sort by Max H) -->
+<div style="font-weight:bold; margin-bottom:6px;">
+  Symbol:
+  <div class="symbol-multiselect" id="symbolMultiSelectBox">
+    <div class="selected-label" tabindex="0" id="symbolMultiSelectLabel">Select Symbol</div>
+    <div class="symbol-multiselect-list" id="symbolMultiSelectList" style="display:none;"></div>
+  </div>
+  <button id="sortSymbolsBtn" style="margin-left:8px;">Sort by Max H</button>
+  <button id="selectAllBtn" style="margin-left:8px;">Select All</button>
+  <button id="unselectAllBtn" style="margin-left:3px;">Unselect All</button>
+  <button id="clearDataBtn" style="margin-left:8px;">Clear Data</button>
+</div>
+
     <!-- 2.3: Filters -->
     <div><b>AR Min. (%):</b>
       <input type="range" id="arFloor" min="0" max="100" step="0.1" value="1" style="width:110px;vertical-align:middle;">
@@ -294,100 +294,105 @@
     }
   }
 
-  // 5.4.2: Sort Button Event
-  sortSymbolsBtn.addEventListener('click', () => {
-    sortByMaxH = !sortByMaxH;
-    sortModeLabel.textContent = sortByMaxH ? "(Max H)" : "(A–Z)";
-    populateSymbols();
+// 5.4.2: Sort Button Event & Symbol Multiselect Logic
+
+// Set initial sort button label
+sortSymbolsBtn.textContent = sortByMaxH ? "A→Z" : "Sort by Max H";
+
+sortSymbolsBtn.addEventListener('click', () => {
+  sortByMaxH = !sortByMaxH;
+  sortSymbolsBtn.textContent = sortByMaxH ? "A→Z" : "Sort by Max H";
+  populateSymbols();
+});
+
+function getUniqueSymbolSources() {
+  if (!Array.isArray(window.allData)) return [];
+  const seen = new Set();
+  const combos = [];
+  window.allData.forEach(row => {
+    const key = `${row.symbol} (${row.source})`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      combos.push(key);
+    }
   });
+  return combos;
+}
 
-  function getUniqueSymbolSources() {
-    if (!Array.isArray(window.allData)) return [];
-    const seen = new Set();
-    const combos = [];
-    window.allData.forEach(row => {
-      const key = `${row.symbol} (${row.source})`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        combos.push(key);
-      }
-    });
-    return combos;
+function populateSymbols() {
+  allSymbolList = getSortedSymbolList();
+  selectedSymbols = [];
+  symbolMultiSelectList.innerHTML = '';
+  allSymbolList.forEach((sym, idx) => {
+    const id = `multisym-${idx}`;
+    const label = document.createElement('label');
+    label.innerHTML = `<input type="checkbox" id="${id}" value="${sym}"> ${sym}`;
+    symbolMultiSelectList.appendChild(label);
+  });
+  // Auto-select first symbol and update UI
+  if (allSymbolList.length) {
+    selectedSymbols = [allSymbolList[0]];
+    symbolMultiSelectList.querySelector('input').checked = true;
+    updateSymbolLabel();
+    drawHeatmaps();
+  } else {
+    updateSymbolLabel();
+    drawHeatmaps();
   }
+}
 
-  function populateSymbols() {
-    allSymbolList = getSortedSymbolList();
-    selectedSymbols = [];
-    symbolMultiSelectList.innerHTML = '';
-    allSymbolList.forEach((sym, idx) => {
-      const id = `multisym-${idx}`;
-      const label = document.createElement('label');
-      label.innerHTML = `<input type="checkbox" id="${id}" value="${sym}"> ${sym}`;
-      symbolMultiSelectList.appendChild(label);
-    });
-    // Auto-select first symbol and update UI
-    if (allSymbolList.length) {
-      selectedSymbols = [allSymbolList[0]];
-      symbolMultiSelectList.querySelector('input').checked = true;
-      updateSymbolLabel();
-      drawHeatmaps();
+function openSymbolList() {
+  symbolMultiSelectList.style.display = 'block';
+  symbolMultiSelectBox.classList.add('open');
+  symbolMultiSelectLabel.focus();
+}
+function closeSymbolList() {
+  symbolMultiSelectList.style.display = 'none';
+  symbolMultiSelectBox.classList.remove('open');
+}
+symbolMultiSelectLabel.onclick = () => {
+  if (symbolMultiSelectList.style.display === 'block') closeSymbolList();
+  else openSymbolList();
+};
+symbolMultiSelectLabel.onkeydown = (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault(); openSymbolList();
+  }
+};
+symbolMultiSelectList.onclick = (e) => {
+  if (e.target.tagName === "INPUT") {
+    const sym = e.target.value;
+    if (e.target.checked) {
+      if (!selectedSymbols.includes(sym)) selectedSymbols.push(sym);
     } else {
-      updateSymbolLabel();
-      drawHeatmaps();
+      selectedSymbols = selectedSymbols.filter(s => s !== sym);
     }
+    updateSymbolLabel(); drawHeatmaps();
   }
+};
+document.addEventListener('mousedown', (e) => {
+  if (!symbolMultiSelectBox.contains(e.target)) closeSymbolList();
+});
+function updateSymbolLabel() {
+  if (selectedSymbols.length === 0) symbolMultiSelectLabel.innerText = "Select Symbol";
+  else if (selectedSymbols.length === 1) symbolMultiSelectLabel.innerText = selectedSymbols[0];
+  else symbolMultiSelectLabel.innerText = `${selectedSymbols.length} symbols`;
+}
 
-  function openSymbolList() {
-    symbolMultiSelectList.style.display = 'block';
-    symbolMultiSelectBox.classList.add('open');
-    symbolMultiSelectLabel.focus();
-  }
-  function closeSymbolList() {
-    symbolMultiSelectList.style.display = 'none';
-    symbolMultiSelectBox.classList.remove('open');
-  }
-  symbolMultiSelectLabel.onclick = () => {
-    if (symbolMultiSelectList.style.display === 'block') closeSymbolList();
-    else openSymbolList();
-  };
-  symbolMultiSelectLabel.onkeydown = (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault(); openSymbolList();
-    }
-  };
-  symbolMultiSelectList.onclick = (e) => {
-    if (e.target.tagName === "INPUT") {
-      const sym = e.target.value;
-      if (e.target.checked) {
-        if (!selectedSymbols.includes(sym)) selectedSymbols.push(sym);
-      } else {
-        selectedSymbols = selectedSymbols.filter(s => s !== sym);
-      }
-      updateSymbolLabel(); drawHeatmaps();
-    }
-  };
-  document.addEventListener('mousedown', (e) => {
-    if (!symbolMultiSelectBox.contains(e.target)) closeSymbolList();
-  });
-  function updateSymbolLabel() {
-    if (selectedSymbols.length === 0) symbolMultiSelectLabel.innerText = "Select Symbol";
-    else if (selectedSymbols.length === 1) symbolMultiSelectLabel.innerText = selectedSymbols[0];
-    else symbolMultiSelectLabel.innerText = `${selectedSymbols.length} symbols`;
-  }
+// Select All and Unselect All button logic
+selectAllBtn.addEventListener('click', () => {
+  selectedSymbols = [...allSymbolList];
+  symbolMultiSelectList.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = true; });
+  updateSymbolLabel();
+  drawHeatmaps();
+});
+unselectAllBtn.addEventListener('click', () => {
+  selectedSymbols = [];
+  symbolMultiSelectList.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = false; });
+  updateSymbolLabel();
+  drawHeatmaps();
+});
 
-  // Select All and Unselect All button logic
-  selectAllBtn.addEventListener('click', () => {
-    selectedSymbols = [...allSymbolList];
-    symbolMultiSelectList.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = true; });
-    updateSymbolLabel();
-    drawHeatmaps();
-  });
-  unselectAllBtn.addEventListener('click', () => {
-    selectedSymbols = [];
-    symbolMultiSelectList.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = false; });
-    updateSymbolLabel();
-    drawHeatmaps();
-  });
 
   // 5.5: Clear Data
   clearDataBtn.addEventListener('click', () => {
