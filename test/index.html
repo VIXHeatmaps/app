@@ -317,9 +317,9 @@ function populateSymbols() {
 
   // 3. Render options, restoring previously selected items
   allSymbolList.forEach((sym, idx) => {
-    const id = `multisym-${idx}`;
+    const id = multisym-${idx};
     const label = document.createElement('label');
-    label.innerHTML = `<input type="checkbox" id="${id}" value="${sym}"> ${sym}`;
+    label.innerHTML = <input type="checkbox" id="${id}" value="${sym}"> ${sym};
     const cb = label.querySelector('input');
     if (prevSelected.has(sym)) {
       cb.checked = true;
@@ -343,7 +343,7 @@ function getUniqueSymbolSources() {
   const seen = new Set();
   const combos = [];
   window.allData.forEach(row => {
-    const key = `${row.symbol} (${row.source})`;
+    const key = ${row.symbol} (${row.source});
     if (!seen.has(key)) {
       seen.add(key);
       combos.push(key);
@@ -387,7 +387,7 @@ document.addEventListener('mousedown', (e) => {
 function updateSymbolLabel() {
   if (selectedSymbols.length === 0) symbolMultiSelectLabel.innerText = "Select Symbol";
   else if (selectedSymbols.length === 1) symbolMultiSelectLabel.innerText = selectedSymbols[0];
-  else symbolMultiSelectLabel.innerText = `${selectedSymbols.length} symbols`;
+  else symbolMultiSelectLabel.innerText = ${selectedSymbols.length} symbols;
 }
 
 // Select All and Unselect All button logic
@@ -437,7 +437,7 @@ unselectAllBtn.addEventListener('click', () => {
     await loadTickerNames();
     let filesToFetch = [];
     for (let i = 1; i <= 20; i++) {
-      filesToFetch.push(`/app/data/LoadData${i}.csv`);
+      filesToFetch.push(/app/data/LoadData${i}.csv);
     }
     let filesLoaded = 0;
     let atLeastOneLoaded = false;
@@ -496,7 +496,227 @@ unselectAllBtn.addEventListener('click', () => {
     drawHeatmaps();
   });
 
+// 5.10: Draw Heatmaps (with TickerNames, Proximity Grid, per-heatmap Max H, GLOBAL colorbar min/max, and SOFT GLOW overlay)
+window.colorbarMinGlobal = -1;
+window.colorbarMaxGlobal = 1;
 
+function drawHeatmaps() {
+  heatmapsContainer.innerHTML = '';
+  if (!selectedSymbols.length) {
+    const msg = document.createElement('div');
+    msg.style.textAlign = 'center';
+    msg.style.margin = '30px 0 30px 0';
+    msg.style.color = '#666';
+    msg.style.fontSize = '1.10em';
+    msg.innerHTML = 'Select one or more symbols above to view heatmaps.';
+    heatmapsContainer.appendChild(msg);
+    return;
+  }
+  let overallMaxH = -Infinity;
+  selectedSymbols.forEach((symbolSource, plotIdx) => {
+    const match = symbolSource.match(/^(.*) \((.*)\)$/);
+    if (!match) return;
+    const symbol = match[1];
+    const source = match[2];
+    const rows = window.allData.filter(r => r.symbol === symbol && r.source === source);
+    if (!rows.length) return;
+    const xs = Array.from(new Set(rows.map(r => r.rsi))).sort((a, b) => +a - +b);
+    const ys = Array.from(new Set(rows.map(r => r.day))).sort((a, b) => +a - +b);
+    const arM = ys.map(y => xs.map(x => {
+      const rec = rows.find(r => r.day === y && r.rsi === x);
+      return rec ? rec.ar : null;
+    }));
+    const mdM = ys.map(y => xs.map(x => {
+      const rec = rows.find(r => r.day === y && r.rsi === x);
+      return rec ? rec.md : null;
+    }));
+    const cmM = ys.map(y => xs.map(x => {
+      const rec = rows.find(r => r.day === y && r.rsi === x);
+      return rec ? rec.cm : null;
+    }));
+    const floor = +arFloor.value;
+    const minMD = +mdMin.value;
+    const ceilMD = +mdCeil.value;
+    let zminVal = window.colorbarMinGlobal;
+    let zmaxVal = window.colorbarMaxGlobal;
+
+    // --- Calculate base H, then apply proximity grid averaging ---
+    const baseH = computeH(arM, mdM, floor, minMD);
+    const H = computeProximityGridAverage(baseH, proximityGridSize);
+
+    const EPSILON = 1e-6;
+    let mask;
+    if (ceilMD <= EPSILON) mask = mdM.map(row => row.map(() => 1));
+    else if (ceilMD >= 100 - EPSILON) mask = mdM.map(row => row.map(() => 0));
+    else mask = mdM.map(row => row.map(v => (v != null && v > ceilMD) ? 1 : 0));
+    let maxH = -Infinity, maxI = null, maxJ = null;
+    for (let i = 0; i < H.length; i++) {
+      for (let j = 0; j < H[i].length; j++) {
+        if (H[i][j] != null && H[i][j] > maxH) {
+          maxH = H[i][j];
+          maxI = i;
+          maxJ = j;
+        }
+      }
+    }
+    if (maxH > overallMaxH) overallMaxH = maxH;
+
+    // --- Layout: Fund name between ticker/source and heatmap, plus per-heatmap Max H
+    const fundName = tickerNameMap[symbol] || "";
+    section = document.createElement('div');
+    section.className = 'heatmap-section';
+    section.innerHTML = 
+      <div style="position:relative;">
+        <div id="heatmap-title-${plotIdx}" style="text-align:center;">
+          <div style="font-size:18px;color:#1b365d;font-weight:500;margin-bottom:0px;">${symbolSource}</div>
+          ${fundName ? <div style="font-size:12px; color:#2e4057; margin-top:2px; margin-bottom:5px;">${fundName}</div> : ""}
+          <div style="font-size:12px; font-weight:bold; color:#1e522e; margin-bottom:8px;">Current Max H: ${maxH === -Infinity ? '--' : maxH.toFixed(3)}</div>
+        </div>
+        <div style="display:flex; flex-direction:row; align-items:center;">
+          <!-- Y Axis Hover (Days, with number ABOVE the word) -->
+          <div id="yHoverBox-${plotIdx}" style="width:45px; display:flex; flex-direction:column; align-items:center; justify-content:center; height:56vh;">
+            <span style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; writing-mode: vertical-lr; transform: rotate(180deg); font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; letter-spacing:0.5px;">
+              <span id="hoverYValue-${plotIdx}" style="font-size:19px; font-weight:700; color:#253358; min-height:18px; margin-top:0; margin-bottom:8px;"></span>
+              <span style="font-size:16px; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; font-weight:300; color:#3e5678; margin-top:0;">Days</span>
+            </span>
+          </div>
+          <div style="flex:1;">
+            <div id="heatmap-${plotIdx}" style="height: 56vh;"></div>
+            <div class="colorbar-input-container" style="top: 2px;" id="colorbar-max-container-${plotIdx}">
+              <span class="colorbar-label">Max H</span>
+              <input type="number" step="0.01" value="${zmaxVal}" id="colorbar-max-${plotIdx}" class="colorbar-input">
+            </div>
+            <div class="colorbar-input-container" style="bottom: 16px; top:unset;" id="colorbar-min-container-${plotIdx}">
+              <span class="colorbar-label">Min H</span>
+              <input type="number" step="0.01" value="${zminVal}" id="colorbar-min-${plotIdx}" class="colorbar-input">
+            </div>
+          </div>
+        </div>
+        <!-- X Axis Hover (RSI) -->
+        <div style="display: flex; flex-direction:column; align-items:center; margin-top:2px;">
+          <span style="font-size:16px; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; font-weight:300; color:#3e5678; margin-bottom:0; letter-spacing:0.5px;">RSI</span>
+          <span id="hoverXValue-${plotIdx}" style="font-size:19px; font-weight:700; color:#253358; min-height:18px;"></span>
+        </div>
+      </div>
+    ;
+    heatmapsContainer.appendChild(section);
+
+    // --- Build overlay traces (Soft Glow, Ring, Dot) if valid max cell found
+    let overlayTraces = [];
+    if (maxI !== null && maxJ !== null) {
+      const highlightX = [xs[maxJ]];
+      const highlightY = [ys[maxI]];
+
+      // Dynamic soft glow size based on proximityGridSize
+      // Default size for 3x3 = 60; scale linearly
+      let glowSize = 40;
+      if (proximityGridSize === 1) glowSize = 35;
+      else if (proximityGridSize === 3) glowSize = 60;
+      else if (proximityGridSize === 5) glowSize = 80;
+      else if (proximityGridSize === 7) glowSize = 100;
+
+      overlayTraces.push({
+        x: highlightX, y: highlightY, mode: 'markers', type: 'scatter',
+        showlegend: false, hoverinfo: 'skip',
+        marker: {
+          size: glowSize,
+          color: 'rgba(255,255,210,0.15)',
+          line: { color: 'rgba(255,255,210,0.10)', width: 2 },
+          opacity: 1,
+          symbol: 'circle',
+          layer: 'below',
+        }
+      });
+      // Clean ring
+      overlayTraces.push({
+        x: highlightX, y: highlightY, mode: 'markers', type: 'scatter',
+        showlegend: false, hoverinfo: 'skip',
+        marker: {
+          size: 28,
+          color: 'rgba(255,240,80,0)',
+          line: { color: 'rgba(255,200,50,0.95)', width: 4 },
+          opacity: 1,
+          symbol: 'circle-open',
+          layer: 'above',
+        }
+      });
+      // Small dot
+      overlayTraces.push({
+        x: highlightX, y: highlightY, mode: 'markers', type: 'scatter',
+        showlegend: false, hoverinfo: 'skip',
+        marker: {
+          size: 10,
+          color: 'rgba(255,200,50,0.30)',
+          line: { color: 'rgba(255,200,50,0)', width: 0 },
+          opacity: 1,
+          symbol: 'circle',
+          layer: 'above',
+        }
+      });
+    }
+
+    // --- Main heatmap plot
+    const heatDiv = section.querySelector(#heatmap-${plotIdx});
+    Plotly.newPlot(heatDiv, [
+      {
+        z: H, x: xs, y: ys, type: 'heatmap',
+        colorscale: [[0, 'green'], [0.5, 'yellow'], [1, 'red']],
+        zmin: zminVal, zmax: zmaxVal,
+        colorbar: {
+          thickness: 15, len: 0.92, x: 1.01, y: 0.5, tickfont: {size: 12}
+        },
+        customdata: arM.map((r, i) => r.map((_, j) => [arM[i][j], mdM[i][j], cmM[i][j], H[i][j]])),
+        hovertemplate: 'AR: %{customdata[0]:.2f}%<br>MD: %{customdata[1]:.2f}%<br>Calmar: %{customdata[2]:.2f}<br>H: %{customdata[3]:.3f}<extra></extra>'
+      },
+      {
+        z: mask, x: xs, y: ys, type: 'heatmap', showscale: false,
+        colorscale: [[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0.45)']], hoverinfo: 'skip'
+      },
+      ...overlayTraces
+    ], {
+      margin: { l: 30, r: 65, t: 15, b: 45 },
+      xaxis: { title: '', tickfont: {size:12}, titlefont:{size:12} },
+      yaxis: { title: '', tickfont: {size:12}, titlefont:{size:12} },
+      annotations: []
+    }, { responsive: true });
+
+    // --- GLOBAL colorbar min/max event handlers (sync all boxes, update all charts)
+    setTimeout(() => {
+      const minInput = document.getElementById(colorbar-min-${plotIdx});
+      const maxInput = document.getElementById(colorbar-max-${plotIdx});
+      minInput.onchange = function() {
+        window.colorbarMinGlobal = Number(minInput.value);
+        document.querySelectorAll('.colorbar-input[id^="colorbar-min-"]').forEach(inp => inp.value = window.colorbarMinGlobal);
+        drawHeatmaps();
+      };
+      maxInput.onchange = function() {
+        window.colorbarMaxGlobal = Number(maxInput.value);
+        document.querySelectorAll('.colorbar-input[id^="colorbar-max-"]').forEach(inp => inp.value = window.colorbarMaxGlobal);
+        drawHeatmaps();
+      };
+      minInput.onblur = function() {
+        document.querySelectorAll('.colorbar-input[id^="colorbar-min-"]').forEach(inp => inp.value = window.colorbarMinGlobal);
+      }
+      maxInput.onblur = function() {
+        document.querySelectorAll('.colorbar-input[id^="colorbar-max-"]').forEach(inp => inp.value = window.colorbarMaxGlobal);
+      }
+    }, 0);
+
+    // --- Custom crosshair values (RSI and Days)
+    const hoverX = section.querySelector(#hoverXValue-${plotIdx});
+    const hoverY = section.querySelector(#hoverYValue-${plotIdx});
+
+    heatDiv.on('plotly_hover', function(eventData) {
+      var pt = eventData.points[0];
+      hoverX.innerText = pt.x;
+      hoverY.innerText = pt.y;
+    });
+    heatDiv.on('plotly_unhover', function() {
+      hoverX.innerText = '';
+      hoverY.innerText = '';
+    });
+  });
+}
 
 
 
@@ -537,8 +757,8 @@ unselectAllBtn.addEventListener('click', () => {
     const floor = +arFloor.value;
     const minMD = +mdMin.value;
     const ceilMD = +mdCeil.value;
-    const hColName = `H (Rmin${floor}|Dmin${minMD}|Dmax${ceilMD}|Prox${proximityGridSize})`;
-    let csv = `Symbol,Source,Days,RSI,AR,MD,Calmar,${hColName}\n`;
+    const hColName = H (Rmin${floor}|Dmin${minMD}|Dmax${ceilMD}|Prox${proximityGridSize});
+    let csv = Symbol,Source,Days,RSI,AR,MD,Calmar,${hColName}\n;
     selectedSymbols.forEach(symbolSource => {
       const match = symbolSource.match(/^(.*) \((.*)\)$/);
       if (!match) return;
@@ -565,8 +785,8 @@ unselectAllBtn.addEventListener('click', () => {
         for (let j = 0; j < xs.length; ++j) {
           if (arM[i][j] == null) continue;
           csv += [
-            `"${symbol}"`,
-            `"${source}"`,
+            "${symbol}",
+            "${source}",
             ys[i], xs[j],
             arM[i][j], mdM[i][j],
             (cmM[i][j] == null ? "" : cmM[i][j]),
@@ -610,7 +830,7 @@ unselectAllBtn.addEventListener('click', () => {
     Object.keys(headerMap).forEach(key => {
       const idx = findCol(headers, headerMap[key].map(s => s.toLowerCase()));
       if (idx === -1 && key !== 'source') {
-        throw new Error(`Missing column for ${key} (${headerMap[key].join('/')})`);
+        throw new Error(Missing column for ${key} (${headerMap[key].join('/')}));
       }
       colIdx[key] = idx;
     });
@@ -636,4 +856,3 @@ unselectAllBtn.addEventListener('click', () => {
 
 </body>
 </html>
-
