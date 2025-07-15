@@ -653,8 +653,18 @@ function drawHeatmaps() {
       }
     ], {
       margin: { l: 30, r: 65, t: 15, b: 45 },
-      xaxis: { title: '', tickfont: {size:12}, titlefont:{size:12} },
-      yaxis: { title: '', tickfont: {size:12}, titlefont:{size:12} },
+      xaxis: { 
+        title: '', 
+        tickfont: {size:12}, 
+        titlefont:{size:12},
+        constrain: 'range' // <-- lock axes to data only, ignore shapes
+      },
+      yaxis: { 
+        title: '', 
+        tickfont: {size:12}, 
+        titlefont:{size:12},
+        constrain: 'range'
+      },
       annotations: [],
       shapes // <-- Our overlay!
     }, { responsive: true });
@@ -696,6 +706,7 @@ function drawHeatmaps() {
     });
   });
 }
+
 
 
 
