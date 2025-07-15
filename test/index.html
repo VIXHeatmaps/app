@@ -305,6 +305,39 @@ sortSymbolsBtn.addEventListener('click', () => {
   populateSymbols();
 });
 
+// --- Preserve selections when (re)populating symbol list ---
+function populateSymbols() {
+  // 1. Save current selection before rebuilding
+  const prevSelected = new Set(selectedSymbols);
+
+  // 2. Build sorted symbol list and clear old HTML
+  allSymbolList = getSortedSymbolList();
+  symbolMultiSelectList.innerHTML = '';
+  selectedSymbols = [];
+
+  // 3. Render options, restoring previously selected items
+  allSymbolList.forEach((sym, idx) => {
+    const id = `multisym-${idx}`;
+    const label = document.createElement('label');
+    label.innerHTML = `<input type="checkbox" id="${id}" value="${sym}"> ${sym}`;
+    const cb = label.querySelector('input');
+    if (prevSelected.has(sym)) {
+      cb.checked = true;
+      selectedSymbols.push(sym);
+    }
+    symbolMultiSelectList.appendChild(label);
+  });
+
+  // 4. If nothing is selected, select the first symbol
+  if (!selectedSymbols.length && allSymbolList.length) {
+    selectedSymbols = [allSymbolList[0]];
+    symbolMultiSelectList.querySelector('input').checked = true;
+  }
+
+  updateSymbolLabel();
+  drawHeatmaps();
+}
+
 function getUniqueSymbolSources() {
   if (!Array.isArray(window.allData)) return [];
   const seen = new Set();
@@ -317,28 +350,6 @@ function getUniqueSymbolSources() {
     }
   });
   return combos;
-}
-
-function populateSymbols() {
-  allSymbolList = getSortedSymbolList();
-  selectedSymbols = [];
-  symbolMultiSelectList.innerHTML = '';
-  allSymbolList.forEach((sym, idx) => {
-    const id = `multisym-${idx}`;
-    const label = document.createElement('label');
-    label.innerHTML = `<input type="checkbox" id="${id}" value="${sym}"> ${sym}`;
-    symbolMultiSelectList.appendChild(label);
-  });
-  // Auto-select first symbol and update UI
-  if (allSymbolList.length) {
-    selectedSymbols = [allSymbolList[0]];
-    symbolMultiSelectList.querySelector('input').checked = true;
-    updateSymbolLabel();
-    drawHeatmaps();
-  } else {
-    updateSymbolLabel();
-    drawHeatmaps();
-  }
 }
 
 function openSymbolList() {
@@ -392,6 +403,7 @@ unselectAllBtn.addEventListener('click', () => {
   updateSymbolLabel();
   drawHeatmaps();
 });
+
 
 
   // 5.5: Clear Data
