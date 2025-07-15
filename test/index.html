@@ -260,44 +260,36 @@ const csvInput = document.getElementById('csvInput'),
   const selectAllBtn = document.getElementById('selectAllBtn');
   const unselectAllBtn = document.getElementById('unselectAllBtn');
 
-  // 5.4.1: Sorting Logic
-  function getMaxHForSymbolSource(symbolSource) {
-    const match = symbolSource.match(/^(.*) \((.*)\)$/);
-    if (!match) return -Infinity;
-    const symbol = match[1];
-    const source = match[2];
-    const rows = window.allData.filter(r => r.symbol === symbol && r.source === source);
-    if (!rows.length) return -Infinity;
-    // Need to recompute H with current filter settings
-    const xs = Array.from(new Set(rows.map(r => r.rsi))).sort((a, b) => +a - +b);
-    const ys = Array.from(new Set(rows.map(r => r.day))).sort((a, b) => +a - +b);
-    const arM = ys.map(y => xs.map(x => {
-      const rec = rows.find(r => r.day === y && r.rsi === x);
-      return rec ? rec.ar : null;
-    }));
-    const mdM = ys.map(y => xs.map(x => {
-      const rec = rows.find(r => r.day === y && r.rsi === x);
-      return rec ? rec.md : null;
-    }));
-    const floor = +arFloor.value;
-    const minMD = +mdMin.value;
-    const H = computeH(arM, mdM, floor, minMD);
-    let maxH = -Infinity;
-    H.forEach(row => row.forEach(v => { if (v != null && v > maxH) maxH = v; }));
-    return maxH;
-  }
+ // 5.4.1: Sorting Logic (now uses Proximity Grid H for sorting)
+function getMaxHForSymbolSource(symbolSource) {
+  const match = symbolSource.match(/^(.*) \((.*)\)$/);
+  if (!match) return -Infinity;
+  const symbol = match[1];
+  const source = match[2];
+  const rows = window.allData.filter(r => r.symbol === symbol && r.source === source);
+  if (!rows.length) return -Infinity;
+  // Need to recompute H with current filter settings AND proximity grid
+  const xs = Array.from(new Set(rows.map(r => r.rsi))).sort((a, b) => +a - +b);
+  const ys = Array.from(new Set(rows.map(r => r.day))).sort((a, b) => +a - +b);
+  const arM = ys.map(y => xs.map(x => {
+    const rec = rows.find(r => r.day === y && r.rsi === x);
+    return rec ? rec.ar : null;
+  }));
+  const mdM = ys.map(y => xs.map(x => {
+    const rec = rows.find(r => r.day === y && r.rsi === x);
+    return rec ? rec.md : null;
+  }));
+  const floor = +arFloor.value;
+  const minMD = +mdMin.value;
+  // NEW: Use proximity grid size from current selector
+  const proxGrid = typeof proximityGridSize !== 'undefined' ? proximityGridSize : 1;
+  const baseH = computeH(arM, mdM, floor, minMD);
+  const H = computeProximityGridAverage(baseH, proxGrid);
+  let maxH = -Infinity;
+  H.forEach(row => row.forEach(v => { if (v != null && v > maxH) maxH = v; }));
+  return maxH;
+}
 
-  function getSortedSymbolList() {
-    let baseList = getUniqueSymbolSources();
-    if (sortByMaxH) {
-      return baseList
-        .map(sym => ({ sym, maxH: getMaxHForSymbolSource(sym) }))
-        .sort((a, b) => b.maxH - a.maxH)
-        .map(obj => obj.sym);
-    } else {
-      return baseList.slice().sort((a, b) => a.localeCompare(b));
-    }
-  }
 
 // 5.4.2: Sort Button Event & Symbol Multiselect Logic
 
