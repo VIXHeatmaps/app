@@ -94,13 +94,15 @@
       </button>
     </div>
 
-    <!-- 2.2: Symbol MultiSelect (with Select All/Unselect All) -->
+    <!-- 2.2: Symbol MultiSelect (with Select All/Unselect All & Sort by Max H) -->
     <div style="font-weight:bold; margin-bottom:6px;">
       Symbol:
       <div class="symbol-multiselect" id="symbolMultiSelectBox">
         <div class="selected-label" tabindex="0" id="symbolMultiSelectLabel">Select Symbol</div>
         <div class="symbol-multiselect-list" id="symbolMultiSelectList" style="display:none;"></div>
       </div>
+      <button id="sortSymbolsBtn" style="margin-left:8px;">Sort by Max H</button>
+      <span id="sortModeLabel" style="font-size:11px; color:#777; margin-left:4px;">(A–Z)</span>
       <button id="selectAllBtn" style="margin-left:8px;">Select All</button>
       <button id="unselectAllBtn" style="margin-left:3px;">Unselect All</button>
       <button id="clearDataBtn" style="margin-left:8px;">Clear Data</button>
@@ -155,8 +157,8 @@
   </select>
   <span style="font-size:11px; color:#777;">(average H in grid)</span>
 </div>
-
 <!-- End Chapter 2 -->
+
 
   <!-- Chapter 3: CSV MODAL -->
   <div id="csvModal">
@@ -187,7 +189,6 @@
   <div id="heatmapsContainer" style="margin-top:18px;"></div>
   <!-- End Chapter 4 -->
 
-<!-- Chapter 5: MAIN SCRIPT -->
 <script>
   // 5.1: CSV Modal Logic
   document.getElementById('showCsvTemplate').onclick = function() {
@@ -227,7 +228,8 @@
   let rawText = null;
   let selectedSymbols = [];
   let allSymbolList = [];
-  let tickerNameMap = {}; // Symbol -> Fund Name
+  let tickerNameMap = {};
+  let sortByMaxH = false; // Default sort: alphabetical
 
   // 5.3: DOM References
   const csvInput = document.getElementById('csvInput'),
@@ -242,7 +244,9 @@
         decimalToPercentBox = document.getElementById('decimalToPercentBox'),
         exportCSVBtn = document.getElementById('exportCSVBtn'),
         heatmapsContainer = document.getElementById('heatmapsContainer'),
-        proximityGridSelect = document.getElementById('proximityGridSelect');
+        proximityGridSelect = document.getElementById('proximityGridSelect'),
+        sortSymbolsBtn = document.getElementById('sortSymbolsBtn'),
+        sortModeLabel = document.getElementById('sortModeLabel');
 
   // 5.4: Symbol Multiselect Logic (with Select All / Unselect All)
   const symbolMultiSelectBox = document.getElementById('symbolMultiSelectBox');
@@ -250,6 +254,52 @@
   const symbolMultiSelectList = document.getElementById('symbolMultiSelectList');
   const selectAllBtn = document.getElementById('selectAllBtn');
   const unselectAllBtn = document.getElementById('unselectAllBtn');
+
+  // 5.4.1: Sorting Logic
+  function getMaxHForSymbolSource(symbolSource) {
+    const match = symbolSource.match(/^(.*) \((.*)\)$/);
+    if (!match) return -Infinity;
+    const symbol = match[1];
+    const source = match[2];
+    const rows = window.allData.filter(r => r.symbol === symbol && r.source === source);
+    if (!rows.length) return -Infinity;
+    // Need to recompute H with current filter settings
+    const xs = Array.from(new Set(rows.map(r => r.rsi))).sort((a, b) => +a - +b);
+    const ys = Array.from(new Set(rows.map(r => r.day))).sort((a, b) => +a - +b);
+    const arM = ys.map(y => xs.map(x => {
+      const rec = rows.find(r => r.day === y && r.rsi === x);
+      return rec ? rec.ar : null;
+    }));
+    const mdM = ys.map(y => xs.map(x => {
+      const rec = rows.find(r => r.day === y && r.rsi === x);
+      return rec ? rec.md : null;
+    }));
+    const floor = +arFloor.value;
+    const minMD = +mdMin.value;
+    const H = computeH(arM, mdM, floor, minMD);
+    let maxH = -Infinity;
+    H.forEach(row => row.forEach(v => { if (v != null && v > maxH) maxH = v; }));
+    return maxH;
+  }
+
+  function getSortedSymbolList() {
+    let baseList = getUniqueSymbolSources();
+    if (sortByMaxH) {
+      return baseList
+        .map(sym => ({ sym, maxH: getMaxHForSymbolSource(sym) }))
+        .sort((a, b) => b.maxH - a.maxH)
+        .map(obj => obj.sym);
+    } else {
+      return baseList.slice().sort((a, b) => a.localeCompare(b));
+    }
+  }
+
+  // 5.4.2: Sort Button Event
+  sortSymbolsBtn.addEventListener('click', () => {
+    sortByMaxH = !sortByMaxH;
+    sortModeLabel.textContent = sortByMaxH ? "(Max H)" : "(A–Z)";
+    populateSymbols();
+  });
 
   function getUniqueSymbolSources() {
     if (!Array.isArray(window.allData)) return [];
@@ -266,7 +316,7 @@
   }
 
   function populateSymbols() {
-    allSymbolList = getUniqueSymbolSources();
+    allSymbolList = getSortedSymbolList();
     selectedSymbols = [];
     symbolMultiSelectList.innerHTML = '';
     allSymbolList.forEach((sym, idx) => {
@@ -719,6 +769,7 @@
     }
   }
 </script>
+
 <!-- End Chapter 5: MAIN SCRIPT -->
 
 </body>
