@@ -509,11 +509,70 @@ function drawHeatmaps() {
     const section = createHeatmapSection(symbolSource, tickerNameMap[symbol] || "", maxH, plotIdx);
     heatmapsContainer.appendChild(section);
 
-    // 5.10.3: Overlay Highlight for Max H
-    let overlayTrace = null;
-    if (maxI !== null && maxJ !== null) {
-      overlayTrace = getOverlayTrace(xs, ys, maxJ, maxI);
+  // 5.10.3: Build Overlay Trace (Max H marker, Subtle Layered Glow)
+function getOverlayTrace(xs, ys, maxJ, maxI) {
+  // Subtle two-layer glow: a soft diffuse yellow/white, then a faint sharp ring
+  const highlightX = [xs[maxJ]];
+  const highlightY = [ys[maxI]];
+
+  // Layer 1: Soft glow (large, faint)
+  const softGlow = {
+    x: highlightX,
+    y: highlightY,
+    mode: 'markers',
+    type: 'scatter',
+    showlegend: false,
+    hoverinfo: 'skip',
+    marker: {
+      size: 60, // much bigger than cell, for halo
+      color: 'rgba(255,255,210,0.15)', // very subtle, pale yellow/white
+      line: { color: 'rgba(255,255,210,0.10)', width: 2 },
+      opacity: 1,
+      symbol: 'circle',
+      layer: 'below',
     }
+  };
+
+  // Layer 2: Clean highlight ring (small, crisp, transparent center)
+  const ring = {
+    x: highlightX,
+    y: highlightY,
+    mode: 'markers',
+    type: 'scatter',
+    showlegend: false,
+    hoverinfo: 'skip',
+    marker: {
+      size: 28, // slightly larger than cell
+      color: 'rgba(255,240,80,0)',  // transparent fill
+      line: { color: 'rgba(255,200,50,0.95)', width: 4 },
+      opacity: 1,
+      symbol: 'circle-open',
+      layer: 'above',
+    }
+  };
+
+  // Layer 3 (optional): A small dot at the exact center (very faint, for visual focus)
+  const centerDot = {
+    x: highlightX,
+    y: highlightY,
+    mode: 'markers',
+    type: 'scatter',
+    showlegend: false,
+    hoverinfo: 'skip',
+    marker: {
+      size: 10,
+      color: 'rgba(255,200,50,0.30)',
+      line: { color: 'rgba(255,200,50,0)', width: 0 },
+      opacity: 1,
+      symbol: 'circle',
+      layer: 'above',
+    }
+  };
+
+  // You can tune color/opacity for your taste
+  return [softGlow, ring, centerDot];
+}
+
 
     // 5.10.4: Draw Plotly Chart
     const heatDiv = section.querySelector(`#heatmap-${plotIdx}`);
