@@ -496,7 +496,8 @@ unselectAllBtn.addEventListener('click', () => {
     drawHeatmaps();
   });
 
- function drawHeatmaps() {
+// 5.10: Draw Heatmaps (with dynamic grid-size glow overlay using Plotly shape)
+function drawHeatmaps() {
   heatmapsContainer.innerHTML = '';
   if (!selectedSymbols.length) {
     const msg = document.createElement('div');
@@ -569,7 +570,6 @@ unselectAllBtn.addEventListener('click', () => {
           <div style="font-size:12px; font-weight:bold; color:#1e522e; margin-bottom:8px;">Current Max H: ${maxH === -Infinity ? '--' : maxH.toFixed(3)}</div>
         </div>
         <div style="display:flex; flex-direction:row; align-items:center;">
-          <!-- Y Axis Hover (Days, with number ABOVE the word) -->
           <div id="yHoverBox-${plotIdx}" style="width:45px; display:flex; flex-direction:column; align-items:center; justify-content:center; height:56vh;">
             <span style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; writing-mode: vertical-lr; transform: rotate(180deg); font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; letter-spacing:0.5px;">
               <span id="hoverYValue-${plotIdx}" style="font-size:19px; font-weight:700; color:#253358; min-height:18px; margin-top:0; margin-bottom:8px;"></span>
@@ -588,7 +588,6 @@ unselectAllBtn.addEventListener('click', () => {
             </div>
           </div>
         </div>
-        <!-- X Axis Hover (RSI) -->
         <div style="display: flex; flex-direction:column; align-items:center; margin-top:2px;">
           <span style="font-size:16px; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; font-weight:300; color:#3e5678; margin-bottom:0; letter-spacing:0.5px;">RSI</span>
           <span id="hoverXValue-${plotIdx}" style="font-size:19px; font-weight:700; color:#253358; min-height:18px;"></span>
@@ -597,44 +596,40 @@ unselectAllBtn.addEventListener('click', () => {
     `;
     heatmapsContainer.appendChild(section);
 
-    // --- Dynamic glow circle overlay
-    let overlayTraces = [];
+    // --- Highlight region as a circle or rectangle SHAPE, in data coordinates ---
+    let shapes = [];
     if (maxI !== null && maxJ !== null) {
-      // Cell centers
-      const highlightX = [xs[maxJ]];
-      const highlightY = [ys[maxI]];
-      // Calculate cell step sizes
-      const xStep = xs.length > 1 ? Math.abs(xs[1] - xs[0]) : 1;
-      const yStep = ys.length > 1 ? Math.abs(ys[1] - ys[0]) : 1;
-      // The circle should just fit the grid, so use max(xStep, yStep) * (proximityGridSize - 1) * fudge
-      // Plotly's marker "size" is in px, not data units, so we scale it up based on chart pixel size
-      // We'll estimate the axis range to pixel mapping:
-      const plotHeightPx = 0.56 * window.innerHeight; // 56vh
-      const plotWidthPx = section.querySelector(`#heatmap-${plotIdx}`).offsetWidth || 350;
-      const xPixelsPerUnit = plotWidthPx / (xs.length || 1);
-      const yPixelsPerUnit = plotHeightPx / (ys.length || 1);
-      // The diameter in data units should cover the proximity grid:
-      const xCells = (proximityGridSize - 1);
-      const yCells = (proximityGridSize - 1);
-      // Marker size in px: cover the full grid, use diagonal for circle
-      const gridDiamPx = Math.sqrt((xCells * xPixelsPerUnit) ** 2 + (yCells * yPixelsPerUnit) ** 2);
-      const markerSize = Math.max(20, gridDiamPx * 1.04); // Small fudge for margin
+      // Center cell: (xs[maxJ], ys[maxI])
+      // Determine bounds in data units for the grid
+      const xCells = xs.length, yCells = ys.length;
+      const half = Math.floor(proximityGridSize / 2);
 
-      overlayTraces.push({
-        x: highlightX, y: highlightY, mode: 'markers', type: 'scatter',
-        showlegend: false, hoverinfo: 'skip',
-        marker: {
-          size: markerSize,
-          color: 'rgba(255,255,210,0.15)',
-          line: { color: 'rgba(255,255,210,0.10)', width: 2 },
-          opacity: 1,
-          symbol: 'circle',
-          layer: 'below',
-        }
+      // Find the data min/max coordinates for the region (accounting for grid edges)
+      const x0idx = Math.max(0, maxJ - half), x1idx = Math.min(xCells - 1, maxJ + half);
+      const y0idx = Math.max(0, maxI - half), y1idx = Math.min(yCells - 1, maxI + half);
+      const x0 = xs[x0idx], x1 = xs[x1idx];
+      const y0 = ys[y0idx], y1 = ys[y1idx];
+
+      // Make a circle that fits inside the rectangle covering the grid
+      const cx = xs[maxJ], cy = ys[maxI];
+      const rx = Math.abs(x1 - x0) / 2 || 0.5;
+      const ry = Math.abs(y1 - y0) / 2 || 0.5;
+      const r = Math.max(rx, ry);
+
+      // Draw a circle overlay with partial opacity, in data coordinates
+      shapes.push({
+        type: "circle",
+        xref: "x",
+        yref: "y",
+        x0: cx - r, x1: cx + r,
+        y0: cy - r, y1: cy + r,
+        fillcolor: "rgba(255,255,200,0.19)",
+        line: { color: "rgba(255,255,200,0.3)", width: 2 },
+        layer: "above"
       });
     }
 
-    // --- Main heatmap plot (add overlays here)
+    // --- Main heatmap plot ---
     const heatDiv = section.querySelector(`#heatmap-${plotIdx}`);
     Plotly.newPlot(heatDiv, [
       {
@@ -650,13 +645,13 @@ unselectAllBtn.addEventListener('click', () => {
       {
         z: mask, x: xs, y: ys, type: 'heatmap', showscale: false,
         colorscale: [[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0.45)']], hoverinfo: 'skip'
-      },
-      ...overlayTraces
+      }
     ], {
       margin: { l: 30, r: 65, t: 15, b: 45 },
       xaxis: { title: '', tickfont: {size:12}, titlefont:{size:12} },
       yaxis: { title: '', tickfont: {size:12}, titlefont:{size:12} },
-      annotations: []
+      annotations: [],
+      shapes // <-- Our overlay!
     }, { responsive: true });
 
     // --- GLOBAL colorbar min/max event handlers (sync all boxes, update all charts)
@@ -696,6 +691,7 @@ unselectAllBtn.addEventListener('click', () => {
     });
   });
 }
+
 
 
   // 5.11: Compute H Function
