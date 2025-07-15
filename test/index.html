@@ -606,12 +606,20 @@ function drawHeatmaps() {
     if (maxI !== null && maxJ !== null) {
       const highlightX = [xs[maxJ]];
       const highlightY = [ys[maxI]];
-      // Soft glow (layered)
+
+      // Dynamic soft glow size based on proximityGridSize
+      // Default size for 3x3 = 60; scale linearly
+      let glowSize = 40;
+      if (proximityGridSize === 1) glowSize = 35;
+      else if (proximityGridSize === 3) glowSize = 60;
+      else if (proximityGridSize === 5) glowSize = 80;
+      else if (proximityGridSize === 7) glowSize = 100;
+
       overlayTraces.push({
         x: highlightX, y: highlightY, mode: 'markers', type: 'scatter',
         showlegend: false, hoverinfo: 'skip',
         marker: {
-          size: 60,
+          size: glowSize,
           color: 'rgba(255,255,210,0.15)',
           line: { color: 'rgba(255,255,210,0.10)', width: 2 },
           opacity: 1,
@@ -709,6 +717,7 @@ function drawHeatmaps() {
     });
   });
 }
+
 
 
   // 5.11: Compute H Function
