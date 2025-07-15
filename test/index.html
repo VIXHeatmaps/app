@@ -484,7 +484,7 @@ unselectAllBtn.addEventListener('click', () => {
     drawHeatmaps();
   });
 
-// 5.10: Draw Heatmaps (with Max H Glow)
+// 5.10: Draw Heatmaps (with Max H Soft Glow Highlight)
 window.colorbarMinGlobal = -1;
 window.colorbarMaxGlobal = 1;
 
@@ -509,74 +509,18 @@ function drawHeatmaps() {
     const section = createHeatmapSection(symbolSource, tickerNameMap[symbol] || "", maxH, plotIdx);
     heatmapsContainer.appendChild(section);
 
-  // 5.10.3: Build Overlay Trace (Max H marker, Subtle Layered Glow)
-function getOverlayTrace(xs, ys, maxJ, maxI) {
-  // Subtle two-layer glow: a soft diffuse yellow/white, then a faint sharp ring
-  const highlightX = [xs[maxJ]];
-  const highlightY = [ys[maxI]];
-
-  // Layer 1: Soft glow (large, faint)
-  const softGlow = {
-    x: highlightX,
-    y: highlightY,
-    mode: 'markers',
-    type: 'scatter',
-    showlegend: false,
-    hoverinfo: 'skip',
-    marker: {
-      size: 60, // much bigger than cell, for halo
-      color: 'rgba(255,255,210,0.15)', // very subtle, pale yellow/white
-      line: { color: 'rgba(255,255,210,0.10)', width: 2 },
-      opacity: 1,
-      symbol: 'circle',
-      layer: 'below',
+    // 5.10.3: Build Overlay Traces (Soft Glow, Ring, Center Dot)
+    let overlayTraces = null;
+    if (maxI !== null && maxJ !== null) {
+      overlayTraces = getOverlayTraces(xs, ys, maxJ, maxI);
     }
-  };
 
-  // Layer 2: Clean highlight ring (small, crisp, transparent center)
-  const ring = {
-    x: highlightX,
-    y: highlightY,
-    mode: 'markers',
-    type: 'scatter',
-    showlegend: false,
-    hoverinfo: 'skip',
-    marker: {
-      size: 28, // slightly larger than cell
-      color: 'rgba(255,240,80,0)',  // transparent fill
-      line: { color: 'rgba(255,200,50,0.95)', width: 4 },
-      opacity: 1,
-      symbol: 'circle-open',
-      layer: 'above',
-    }
-  };
-
-  // Layer 3 (optional): A small dot at the exact center (very faint, for visual focus)
-  const centerDot = {
-    x: highlightX,
-    y: highlightY,
-    mode: 'markers',
-    type: 'scatter',
-    showlegend: false,
-    hoverinfo: 'skip',
-    marker: {
-      size: 10,
-      color: 'rgba(255,200,50,0.30)',
-      line: { color: 'rgba(255,200,50,0)', width: 0 },
-      opacity: 1,
-      symbol: 'circle',
-      layer: 'above',
-    }
-  };
-
-  // You can tune color/opacity for your taste
-  return [softGlow, ring, centerDot];
-}
-
-
-    // 5.10.4: Draw Plotly Chart
+    // 5.10.4: Draw Plotly Chart with Overlays
     const heatDiv = section.querySelector(`#heatmap-${plotIdx}`);
-    drawPlotlyHeatmap(heatDiv, xs, ys, H, arM, mdM, cmM, mask, overlayTrace, zminVal=window.colorbarMinGlobal, zmaxVal=window.colorbarMaxGlobal);
+    drawPlotlyHeatmap(
+      heatDiv, xs, ys, H, arM, mdM, cmM, mask,
+      overlayTraces, zminVal=window.colorbarMinGlobal, zmaxVal=window.colorbarMaxGlobal
+    );
 
     // 5.10.5: Add Colorbar Controls & Event Handlers
     addColorbarHandlers(plotIdx);
@@ -686,27 +630,66 @@ function createHeatmapSection(symbolSource, fundName, maxH, plotIdx) {
   return section;
 }
 
-// 5.10.3: Build Overlay Trace (Max H marker)
-function getOverlayTrace(xs, ys, maxJ, maxI) {
-  return {
-    x: [xs[maxJ]],
-    y: [ys[maxI]],
+// 5.10.3: Build Overlay Traces (Soft Glow, Crisp Ring, Dot)
+function getOverlayTraces(xs, ys, maxJ, maxI) {
+  const highlightX = [xs[maxJ]];
+  const highlightY = [ys[maxI]];
+  // Layer 1: Soft glow
+  const softGlow = {
+    x: highlightX,
+    y: highlightY,
     mode: 'markers',
     type: 'scatter',
     showlegend: false,
     hoverinfo: 'skip',
     marker: {
-      size: 30, // "glow" halo size
-      color: 'rgba(255,220,50,0.44)',
-      line: { color: 'rgba(255,180,0,0.66)', width: 7 },
+      size: 60,
+      color: 'rgba(255,255,210,0.15)',
+      line: { color: 'rgba(255,255,210,0.10)', width: 2 },
       opacity: 1,
-      symbol: 'circle-open',
+      symbol: 'circle',
+      layer: 'below',
     }
   };
+  // Layer 2: Ring
+  const ring = {
+    x: highlightX,
+    y: highlightY,
+    mode: 'markers',
+    type: 'scatter',
+    showlegend: false,
+    hoverinfo: 'skip',
+    marker: {
+      size: 28,
+      color: 'rgba(255,240,80,0)',
+      line: { color: 'rgba(255,200,50,0.95)', width: 4 },
+      opacity: 1,
+      symbol: 'circle-open',
+      layer: 'above',
+    }
+  };
+  // Layer 3: Center Dot
+  const centerDot = {
+    x: highlightX,
+    y: highlightY,
+    mode: 'markers',
+    type: 'scatter',
+    showlegend: false,
+    hoverinfo: 'skip',
+    marker: {
+      size: 10,
+      color: 'rgba(255,200,50,0.30)',
+      line: { color: 'rgba(255,200,50,0)', width: 0 },
+      opacity: 1,
+      symbol: 'circle',
+      layer: 'above',
+    }
+  };
+  return [softGlow, ring, centerDot];
 }
 
-// 5.10.4: Draw Plotly Heatmap
-function drawPlotlyHeatmap(heatDiv, xs, ys, H, arM, mdM, cmM, mask, overlayTrace, zminVal, zmaxVal) {
+// 5.10.4: Draw Plotly Heatmap (with overlays)
+function drawPlotlyHeatmap(heatDiv, xs, ys, H, arM, mdM, cmM, mask, overlayTraces, zminVal, zmaxVal) {
   Plotly.newPlot(heatDiv, [
     {
       z: H, x: xs, y: ys, type: 'heatmap',
@@ -722,7 +705,7 @@ function drawPlotlyHeatmap(heatDiv, xs, ys, H, arM, mdM, cmM, mask, overlayTrace
       z: mask, x: xs, y: ys, type: 'heatmap', showscale: false,
       colorscale: [[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0.45)']], hoverinfo: 'skip'
     },
-    ...(overlayTrace ? [overlayTrace] : [])
+    ...(overlayTraces ? overlayTraces : [])
   ], {
     margin: { l: 30, r: 65, t: 15, b: 45 },
     xaxis: { title: '', tickfont: {size:12}, titlefont:{size:12} },
@@ -770,141 +753,6 @@ function addHoverHandlers(section, plotIdx, heatDiv) {
   });
 }
 
-
-
-  // 5.11: Compute H Function
-  function computeH(ar, md, floor, minMD) {
-    return ar.map((row, i) => row.map((v, j) => {
-      if (v == null) return null;
-      return (v - floor) / Math.max(md[i][j], minMD);
-    }));
-  }
-
-  // 5.11.1: Compute Proximity Grid Average Function
-  function computeProximityGridAverage(mat, windowSize) {
-    if (windowSize <= 1) return mat;
-    const half = Math.floor(windowSize / 2);
-    const nrows = mat.length, ncols = mat[0].length;
-    let result = Array.from({length: nrows}, () => Array(ncols).fill(null));
-    for (let i = 0; i < nrows; ++i) {
-      for (let j = 0; j < ncols; ++j) {
-        let sum = 0, count = 0;
-        for (let di = -half; di <= half; ++di) {
-          for (let dj = -half; dj <= half; ++dj) {
-            let ni = i + di, nj = j + dj;
-            if (ni >= 0 && ni < nrows && nj >= 0 && nj < ncols && mat[ni][nj] != null) {
-              sum += mat[ni][nj];
-              count++;
-            }
-          }
-        }
-        result[i][j] = count > 0 ? sum / count : null;
-      }
-    }
-    return result;
-  }
-
-  // 5.12: Export CSV Logic
-  exportCSVBtn.addEventListener('click', function() {
-    const floor = +arFloor.value;
-    const minMD = +mdMin.value;
-    const ceilMD = +mdCeil.value;
-    const hColName = `H (Rmin${floor}|Dmin${minMD}|Dmax${ceilMD}|Prox${proximityGridSize})`;
-    let csv = `Symbol,Source,Days,RSI,AR,MD,Calmar,${hColName}\n`;
-    selectedSymbols.forEach(symbolSource => {
-      const match = symbolSource.match(/^(.*) \((.*)\)$/);
-      if (!match) return;
-      const symbol = match[1];
-      const source = match[2];
-      const rows = window.allData.filter(r => r.symbol === symbol && r.source === source);
-      const xs = Array.from(new Set(rows.map(r => r.rsi))).sort((a, b) => +a - +b);
-      const ys = Array.from(new Set(rows.map(r => r.day))).sort((a, b) => +a - +b);
-      const arM = ys.map(y => xs.map(x => {
-        const rec = rows.find(r => r.day === y && r.rsi === x);
-        return rec ? rec.ar : null;
-      }));
-      const mdM = ys.map(y => xs.map(x => {
-        const rec = rows.find(r => r.day === y && r.rsi === x);
-        return rec ? rec.md : null;
-      }));
-      const cmM = ys.map(y => xs.map(x => {
-        const rec = rows.find(r => r.day === y && r.rsi === x);
-        return rec ? rec.cm : null;
-      }));
-      const baseH = computeH(arM, mdM, floor, minMD);
-      const H = computeProximityGridAverage(baseH, proximityGridSize);
-      for (let i = 0; i < ys.length; ++i) {
-        for (let j = 0; j < xs.length; ++j) {
-          if (arM[i][j] == null) continue;
-          csv += [
-            `"${symbol}"`,
-            `"${source}"`,
-            ys[i], xs[j],
-            arM[i][j], mdM[i][j],
-            (cmM[i][j] == null ? "" : cmM[i][j]),
-            (H[i][j] == null ? "" : H[i][j].toFixed(5))
-          ].join(",") + "\n";
-        }
-      }
-    });
-    const blob = new Blob([csv], {type: "text/csv"});
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "merged_heatmap_data.csv";
-    document.body.appendChild(a); a.click();
-    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 0);
-  });
-
-  // 5.13: Build From Text Function
-  function buildFromText(text, defaultSource) {
-    const lines = text.trim().split(/\r?\n/);
-    if (!lines.length) return;
-
-    const headerMap = {
-      symbol: ['symbol', 'ticker', 'name'],
-      source: ['source', 'data source', 'datasource', 'data'],
-      day: ['day', 'days', 'timeframe', 'window', 'period', 'lookback'],
-      rsi: ['rsi', 'relative strength index'],
-      ar: ['ar', 'annualized return', 'cagr'],
-      md: ['md', 'max drawdown', 'drawdown']
-    };
-
-    function findCol(headers, aliases) {
-      for (let i = 0; i < headers.length; ++i) {
-        const h = headers[i].trim().toLowerCase();
-        if (aliases.includes(h)) return i;
-      }
-      return -1;
-    }
-
-    const headers = lines[0].split(',');
-    const colIdx = {};
-    Object.keys(headerMap).forEach(key => {
-      const idx = findCol(headers, headerMap[key].map(s => s.toLowerCase()));
-      if (idx === -1 && key !== 'source') {
-        throw new Error(`Missing column for ${key} (${headerMap[key].join('/')})`);
-      }
-      colIdx[key] = idx;
-    });
-
-    for (let i = 1; i < lines.length; ++i) {
-      const c = lines[i].split(',');
-      if (c.length < headers.length) continue;
-      const symbol = c[colIdx.symbol];
-      const source = (colIdx.source !== -1 && c[colIdx.source]) ? c[colIdx.source] : defaultSource;
-      const day = +c[colIdx.day];
-      const rsi = c[colIdx.rsi];
-      let ar = parseFloat(c[colIdx.ar]), md = parseFloat(c[colIdx.md]);
-      if (decimalToPercentBox && decimalToPercentBox.checked) {
-        ar *= 100; md *= 100;
-      }
-      const cm = (md === 0 ? null : ar / md);
-      window.allData.push({ symbol, source, day, rsi, ar, md, cm });
-    }
-  }
-</script>
-
-<!-- End Chapter 5: MAIN SCRIPT -->
 
 </body>
 </html>
