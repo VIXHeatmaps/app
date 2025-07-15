@@ -501,7 +501,7 @@ unselectAllBtn.addEventListener('click', () => {
     drawHeatmaps();
   });
 
-// 5.10: Draw Heatmaps (with dynamic grid-size glow overlay using Plotly shape)
+// 5.10: Draw Heatmaps (with highlight overlay that does NOT distort heatmap aspect)
 function drawHeatmaps() {
   heatmapsContainer.innerHTML = '';
   if (!selectedSymbols.length) {
@@ -565,7 +565,7 @@ function drawHeatmaps() {
 
     // --- Layout: Fund name between ticker/source and heatmap, plus per-heatmap Max H
     const fundName = tickerNameMap[symbol] || "";
-    section = document.createElement('div');
+    const section = document.createElement('div');
     section.className = 'heatmap-section';
     section.innerHTML = `
       <div style="position:relative;">
@@ -653,17 +653,19 @@ function drawHeatmaps() {
       }
     ], {
       margin: { l: 30, r: 65, t: 15, b: 45 },
-      xaxis: { 
-        title: '', 
-        tickfont: {size:12}, 
-        titlefont:{size:12},
-        constrain: 'range' // <-- lock axes to data only, ignore shapes
+      xaxis: {
+        title: '', tickfont: {size:12}, titlefont:{size:12},
+        range: [Math.min(...xs), Math.max(...xs)],
+        constrain: 'range', // This keeps the axis fixed!
+        scaleanchor: 'y',
+        scaleratio: 1
       },
-      yaxis: { 
-        title: '', 
-        tickfont: {size:12}, 
-        titlefont:{size:12},
-        constrain: 'range'
+      yaxis: {
+        title: '', tickfont: {size:12}, titlefont:{size:12},
+        range: [Math.min(...ys), Math.max(...ys)],
+        constrain: 'range', // This keeps the axis fixed!
+        scaleanchor: 'x',
+        scaleratio: 1
       },
       annotations: [],
       shapes // <-- Our overlay!
@@ -706,6 +708,7 @@ function drawHeatmaps() {
     });
   });
 }
+
 
 
 
