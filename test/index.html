@@ -236,7 +236,7 @@ window.colorbarMinGlobal = -1;
 window.colorbarMaxGlobal = 1;
 
 
- // 5.3: DOM References
+// 5.3: DOM References
 const csvInput = document.getElementById('csvInput'),
       arFloor = document.getElementById('arFloor'),
       arFloorNum = document.getElementById('arFloorNum'),
@@ -251,6 +251,14 @@ const csvInput = document.getElementById('csvInput'),
       heatmapsContainer = document.getElementById('heatmapsContainer'),
       proximityGridSelect = document.getElementById('proximityGridSelect'),
       sortSymbolsBtn = document.getElementById('sortSymbolsBtn');
+
+let proximityGridSize = parseInt(proximityGridSelect.value || "1");
+
+proximityGridSelect.addEventListener('change', function() {
+  proximityGridSize = parseInt(this.value);
+  drawHeatmaps();
+});
+
 
 
   // 5.4: Symbol Multiselect Logic (with Select All / Unselect All)
