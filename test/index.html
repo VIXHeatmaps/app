@@ -887,6 +887,95 @@ function buildFromText(text, defaultSource) {
 
 // End Chapter 5.13
 
+// Chapter 5.14: Share Setup via Compressed URL
+
+// -- Helper functions for compression --
+function encodeToBase64(str) {
+  // Convert UTF-8 to base64 (handles Unicode)
+  return btoa(unescape(encodeURIComponent(str)));
+}
+function decodeFromBase64(str) {
+  return decodeURIComponent(escape(atob(str)));
+}
+
+// -- Gather all current state --
+function getCurrentSetup() {
+  return {
+    allData: window.allData,
+    selectedSymbols,
+    colorbarMinGlobal: window.colorbarMinGlobal,
+    colorbarMaxGlobal: window.colorbarMaxGlobal,
+    arFloor: +arFloor.value,
+    mdMin: +mdMin.value,
+    mdCeil: +mdCeil.value,
+    proximityGridSize,
+    sortByMaxH,
+  };
+}
+
+// -- Restore state from object --
+function restoreSetup(setup) {
+  window.allData = setup.allData || [];
+  selectedSymbols = setup.selectedSymbols || [];
+  window.colorbarMinGlobal = setup.colorbarMinGlobal ?? -1;
+  window.colorbarMaxGlobal = setup.colorbarMaxGlobal ?? 1;
+  arFloor.value = arFloorNum.value = setup.arFloor ?? 1;
+  mdMin.value = mdMinNum.value = setup.mdMin ?? 3;
+  mdCeil.value = mdCeilNum.value = setup.mdCeil ?? 20;
+  proximityGridSize = setup.proximityGridSize ?? 1;
+  sortByMaxH = setup.sortByMaxH ?? false;
+  // Sync selectors
+  proximityGridSelect.value = proximityGridSize;
+  sortSymbolsBtn.textContent = sortByMaxH ? "A→Z" : "Sort by Max H";
+  populateSymbols();
+}
+
+// -- Generate the shareable link --
+function generateShareLink() {
+  const setup = getCurrentSetup();
+  const json = JSON.stringify(setup);
+  const encoded = encodeToBase64(json);
+  const url = location.origin + location.pathname + "#setup=" + encoded;
+  return url;
+}
+
+// -- Add a Share button to the UI --
+(function addShareButton() {
+  const btn = document.createElement('button');
+  btn.id = "shareBtn";
+  btn.className = "export-btn";
+  btn.style.marginTop = "4px";
+  btn.textContent = "Share Setup";
+  btn.title = "Copy a link with the current data and settings";
+  document.querySelector('.right-controls').appendChild(btn);
+
+  btn.onclick = function () {
+    const link = generateShareLink();
+    // Try to copy to clipboard
+    navigator.clipboard.writeText(link).then(() => {
+      btn.textContent = "Link copied!";
+      setTimeout(() => { btn.textContent = "Share Setup"; }, 1400);
+    }, () => {
+      // Fallback: show prompt
+      prompt("Copy this link to share:", link);
+    });
+  };
+})();
+
+// -- On page load, check for #setup=... and restore if present --
+window.addEventListener("DOMContentLoaded", function() {
+  if (location.hash.startsWith("#setup=")) {
+    try {
+      const encoded = location.hash.slice(7);
+      const json = decodeFromBase64(encoded);
+      const setup = JSON.parse(json);
+      restoreSetup(setup);
+    } catch (e) {
+      alert("Could not restore shared setup.");
+      console.error(e);
+    }
+  }
+});
 
 
 </script>
