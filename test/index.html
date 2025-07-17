@@ -806,6 +806,18 @@ function drawHeatmaps() {
   });
 
 // 5.13: Build From Text Function
+function normalizeHeader(h) {
+  return h.toLowerCase().replace(/[\s_\-]+/g, '');
+}
+function findCol(headers, aliases) {
+  const normAliases = aliases.map(normalizeHeader);
+  for (let i = 0; i < headers.length; ++i) {
+    const hNorm = normalizeHeader(headers[i]);
+    if (normAliases.includes(hNorm)) return i;
+  }
+  return -1;
+}
+
 function buildFromText(text, defaultSource) {
   const lines = text.trim().split(/\r?\n/);
   if (!lines.length) return;
@@ -819,18 +831,10 @@ function buildFromText(text, defaultSource) {
     md: ['md', 'max drawdown', 'drawdown']
   };
 
-  function findCol(headers, aliases) {
-    for (let i = 0; i < headers.length; ++i) {
-      const h = headers[i].trim().toLowerCase();
-      if (aliases.includes(h)) return i;
-    }
-    return -1;
-  }
-
   const headers = lines[0].split(',');
   const colIdx = {};
   Object.keys(headerMap).forEach(key => {
-    const idx = findCol(headers, headerMap[key].map(s => s.toLowerCase()));
+    const idx = findCol(headers, headerMap[key]);
     if (idx === -1 && key !== 'source') {
       throw new Error(`Missing column for ${key} (${headerMap[key].join('/')})`);
     }
@@ -843,15 +847,25 @@ function buildFromText(text, defaultSource) {
     const symbol = c[colIdx.symbol];
     const source = (colIdx.source !== -1 && c[colIdx.source]) ? c[colIdx.source] : defaultSource;
     const day = +c[colIdx.day];
-    const rsi = parseFloat(c[colIdx.rsi]);   // <-- FIXED: force RSI to number
+    const rsi = parseFloat(c[colIdx.rsi]);
     let ar = parseFloat(c[colIdx.ar]), md = parseFloat(c[colIdx.md]);
     if (decimalToPercentBox && decimalToPercentBox.checked) {
       ar *= 100; md *= 100;
     }
     const cm = (md === 0 ? null : ar / md);
-    window.allData.push({ symbol, source, day, rsi, ar, md, cm });
+
+    // Only add if this symbol/source/day/rsi doesn't already exist
+    if (!window.allData.some(row =>
+      row.symbol === symbol &&
+      row.source === source &&
+      row.day === day &&
+      row.rsi === rsi
+    )) {
+      window.allData.push({ symbol, source, day, rsi, ar, md, cm });
+    }
   }
 }
+
 
 </script>
 
