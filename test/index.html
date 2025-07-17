@@ -497,12 +497,18 @@ unselectAllBtn.addEventListener('click', () => {
     mdCeil.value = mdCeilNum.value = el.value; drawHeatmaps();
   });
 
-  // 5.9.1: Proximity Grid selector logic
-  let proximityGridSize = parseInt(proximityGridSelect.value || "1");
-  proximityGridSelect.addEventListener('change', function() {
-    proximityGridSize = parseInt(this.value);
+ // 5.9.1: Proximity Grid selector logic
+let proximityGridSize = parseInt(proximityGridSelect.value || "1");
+proximityGridSelect.addEventListener('change', function() {
+  proximityGridSize = parseInt(this.value);
+  // If we're sorted by Max H, repopulate symbol list (will trigger resort)
+  if (sortByMaxH) {
+    populateSymbols();
+  } else {
     drawHeatmaps();
-  });
+  }
+});
+
 
 // 5.10: Draw Heatmaps (with highlight overlay that does NOT distort heatmap aspect)
 function drawHeatmaps() {
