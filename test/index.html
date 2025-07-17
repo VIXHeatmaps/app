@@ -82,104 +82,89 @@
 
 
 <!-- Chapter 2: LAYOUT & CONTROLS -->
-  <body>
-<div style="display: flex; justify-content: space-between; align-items: flex-start;">
-  <div class="controls">
-    <!-- 2.1: Metric Display (with Read Me button) -->
-    <div style="font-size: 14px; font-style: italic; margin-bottom: 10px; display:flex; align-items:center;">
-      <div>
-        <b>Metric:</b>
-        H = (AR – AR<sub>min</sub>) / max(MD, MD<sub>min</sub>)
+<body>
+
+  <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+    <div class="controls">
+      <!-- 2.1: Metric Display (with Read Me button) -->
+      <div style="font-size: 14px; font-style: italic; margin-bottom: 10px; display:flex; align-items:center;">
+        <div>
+          <b>Metric:</b>
+          H = (AR – AR<sub>min</sub>) / max(MD, MD<sub>min</sub>)
+        </div>
+        <button id="readMeBtn"
+          style="margin-left:16px; font-size:13px; background:#f8f8f8; border:1px solid #bcbcbc; border-radius:6px; padding:2px 14px; cursor:pointer; font-weight:500;">
+          Read Me
+        </button>
       </div>
-      <button id="readMeBtn"
-        style="margin-left:16px; font-size:13px; background:#f8f8f8; border:1px solid #bcbcbc; border-radius:6px; padding:2px 14px; cursor:pointer; font-weight:500;">
-        Read Me
-      </button>
-    </div>
 
-  <!-- 2.2: Symbol MultiSelect (with Select All/Unselect All & Sort by Max H) -->
-<div style="font-weight:bold; margin-bottom:6px;">
-  Symbol:
-  <div class="symbol-multiselect" id="symbolMultiSelectBox">
-    <div class="selected-label" tabindex="0" id="symbolMultiSelectLabel">Select Symbol</div>
-    <div class="symbol-multiselect-list" id="symbolMultiSelectList" style="display:none;"></div>
-  </div>
-  <button id="sortSymbolsBtn" style="margin-left:8px;">Sort by Max H</button>
-  <button id="selectAllBtn" style="margin-left:8px;">Select All</button>
-  <button id="unselectAllBtn" style="margin-left:3px;">Unselect All</button>
-  <button id="clearDataBtn" style="margin-left:8px;">Clear Data</button>
-</div>
+      <!-- 2.2: Symbol MultiSelect (with Select All/Unselect All & Sort by Max H) -->
+      <div style="font-weight:bold; margin-bottom:6px;">
+        Symbol:
+        <div class="symbol-multiselect" id="symbolMultiSelectBox">
+          <div class="selected-label" tabindex="0" id="symbolMultiSelectLabel">Select Symbol</div>
+          <div class="symbol-multiselect-list" id="symbolMultiSelectList" style="display:none;"></div>
+        </div>
+        <button id="sortSymbolsBtn" style="margin-left:8px;">Sort by Max H</button>
+        <button id="selectAllBtn" style="margin-left:8px;">Select All</button>
+        <button id="unselectAllBtn" style="margin-left:3px;">Unselect All</button>
+        <button id="clearDataBtn" style="margin-left:8px;">Clear Data</button>
+      </div>
 
-    <!-- 2.3: Filters -->
-    <div><b>AR Min. (%):</b>
-      <input type="range" id="arFloor" min="0" max="100" step="0.1" value="1" style="width:110px;vertical-align:middle;">
-      <input type="number" id="arFloorNum" min="0" max="100" step="0.1" value="1" style="width:35px;">
+      <!-- 2.3: Filters -->
+      <div><b>AR Min. (%):</b>
+        <input type="range" id="arFloor" min="0" max="100" step="0.1" value="1" style="width:110px;vertical-align:middle;">
+        <input type="number" id="arFloorNum" min="0" max="100" step="0.1" value="1" style="width:35px;">
+      </div>
+      <div><b>MD Min. (%):</b>
+        <input type="range" id="mdMin" min="0" max="100" step="0.1" value="3" style="width:110px;vertical-align:middle;">
+        <input type="number" id="mdMinNum" min="0" max="100" step="0.1" value="3" style="width:35px;">
+      </div>
+      <div><b>MD Max (%):</b>
+        <input type="range" id="mdCeil" min="0" max="100" step="0.1" value="20" style="width:110px;vertical-align:middle;">
+        <input type="number" id="mdCeilNum" min="0" max="100" step="0.1" value="20" style="width:35px;">
+      </div>
     </div>
-    <div><b>MD Min. (%):</b>
-      <input type="range" id="mdMin" min="0" max="100" step="0.1" value="3" style="width:110px;vertical-align:middle;">
-      <input type="number" id="mdMinNum" min="0" max="100" step="0.1" value="3" style="width:35px;">
-    </div>
-    <div><b>MD Max (%):</b>
-      <input type="range" id="mdCeil" min="0" max="100" step="0.1" value="20" style="width:110px;vertical-align:middle;">
-      <input type="number" id="mdCeilNum" min="0" max="100" step="0.1" value="20" style="width:35px;">
+    <!-- 2.5: Right Controls -->
+    <div class="right-controls">
+      <div class="rc-row">
+        <label for="dataSourceSelect">Data Source:</label>
+        <select id="dataSourceSelect">
+          <option>Exxahub</option>
+          <option>Testfol.io</option>
+          <option>Composer</option>
+          <option>Quantmage</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="rc-row">
+        <label style="font-weight: bold;">Upload <span class="csv-link" id="showCsvTemplate">CSV</span>:</label>
+        <input type="file" id="csvInput" accept=".csv">
+      </div>
+      <div class="rc-row">
+        <input type="checkbox" id="decimalToPercentBox">
+        <label for="decimalToPercentBox" style="font-weight:normal; margin-left:2px;">Decimal → %</label>
+        <span class="select-note">(select prior to upload)</span>
+      </div>
+      <button id="exportCSVBtn" class="export-btn">Download Data</button>
     </div>
   </div>
-  <!-- 2.5: Right Controls -->
-  <div class="right-controls">
-    <div class="rc-row">
-      <label for="dataSourceSelect">Data Source:</label>
-      <select id="dataSourceSelect">
-        <option>Exxahub</option>
-        <option>Testfol.io</option>
-        <option>Composer</option>
-        <option>Quantmage</option>
-        <option>Other</option>
-      </select>
-    </div>
-    <div class="rc-row">
-      <label style="font-weight: bold;">Upload <span class="csv-link" id="showCsvTemplate">CSV</span>:</label>
-      <input type="file" id="csvInput" accept=".csv">
-    </div>
-    <div class="rc-row">
-      <input type="checkbox" id="decimalToPercentBox">
-      <label for="decimalToPercentBox" style="font-weight:normal; margin-left:2px;">Decimal → %</label>
-      <span class="select-note">(select prior to upload)</span>
-    </div>
-    <button id="exportCSVBtn" class="export-btn">Download Data</button>
-  </div>
-</div>
 
-<!-- 2.4: Proximity Grid Selector -->
-<div style="margin-top:8px;">
-  <b>Proximity Grid:</b>
-  <select id="proximityGridSelect">
-    <option value="1">Single Cell (1x1)</option>
-    <option value="3">3x3</option>
-    <option value="5">5x5</option>
-    <option value="7">7x7</option>
-  </select>
-  <span style="font-size:11px; color:#777;">(average H in grid)</span>
-</div>
+  <!-- 2.4: Proximity Grid Selector -->
+  <div style="margin-top:8px;">
+    <b>Proximity Grid:</b>
+    <select id="proximityGridSelect">
+      <option value="1">Single Cell (1x1)</option>
+      <option value="3">3x3</option>
+      <option value="5">5x5</option>
+      <option value="7">7x7</option>
+    </select>
+    <span style="font-size:11px; color:#777;">(average H in grid)</span>
+  </div>
+
+</body>
 <!-- End Chapter 2 -->
 
-
-  <!-- Chapter 3: CSV MODAL -->
-  <div id="csvModal">
-    <div class="modal-content">
-      <button id="closeModalBtn" title="Close">&times;</button>
-      <div style="font-weight: bold; margin-bottom: 6px;">CSV Upload Template</div>
-      <table>
-        <tr>
-          <th>Symbol</th><th>Days</th><th>RSI</th><th>AR</th><th>MD</th>
-        </tr>
-        <tr>
-          <td>TQQQ</td><td>9</td><td>82</td><td>13.59%</td><td>9.63%</td>
-        </tr>
-      </table>
-      <div style="color: #008000; margin-top: 5px;">✓ (<b>column order doesn't matter</b>)</div>
-    </div>
-  </div>
-  <!-- End Chapter 3 -->
 <!-- 3.1: READ ME MODAL -->
 <div id="readMeModal" style="display:none; position:fixed; z-index:20; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.19); align-items:center; justify-content:center;">
   <div style="background:#fff; border-radius:7px; max-width:650px; width:95vw; box-shadow:0 2px 12px rgba(0,0,0,0.10); padding:18px 20px 16px 20px; font-size:15px; line-height:1.5; position:relative;">
