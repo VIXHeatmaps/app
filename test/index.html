@@ -3,84 +3,84 @@
 <head>
   <meta charset="utf-8">
   <title>Heatmap Viewer</title>
- <!-- Chapter 1: LIBRARIES & CSS -->
-<head>
-  <meta charset="utf-8">
-  <title>Heatmap Viewer</title>
   <!-- Favicon: 2x2 grid, one red, three yellow -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect x='0' y='0' width='32' height='32' fill='red'/%3E%3Crect x='32' y='0' width='32' height='32' fill='yellow'/%3E%3Crect x='0' y='32' width='32' height='32' fill='yellow'/%3E%3Crect x='32' y='32' width='32' height='32' fill='yellow'/%3E%3C/svg%3E">
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-  <style>
-    /* 1.1: GLOBAL CSS */
-    html, body { font-size: 12px; font-family: sans-serif; margin: 12px; }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; }
-    .controls { flex: 1; }
-    .right-controls {
-      min-width: 220px;
-      display: flex; flex-direction: column; align-items: flex-start; gap: 6px; font-size: 12px;
-    }
-    .rc-row { display: flex; align-items: center; gap: 6px; font-size: 12px; }
-    .rc-row label, .csv-link, .export-btn, .select-note { font-size: 12px; }
-    .csv-link { color: #0074d9; text-decoration: underline; cursor: pointer; font-weight: 600; margin: 0 2px;}
-    .export-btn {
-      background: #1884f7; color: white; border: none; border-radius: 5px; padding: 2px 12px;
-      font-size: 12px; cursor: pointer; font-weight: 500; margin-top: 0;
-      transition: background 0.13s;
-    }
-    .export-btn:hover { background: #0059b2; }
-    .select-note { color: #189c2f; margin-left: 4px; }
-    #csvModal { display: none; position: fixed; z-index: 12; left: 0; top: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.13); align-items: center; justify-content: center;}
-    #csvModal .modal-content {
-      background: #fff; border-radius: 6px; box-shadow: 0 2px 12px rgba(0,0,0,0.10);
-      padding: 12px 16px 10px 16px; min-width: 190px; max-width: 96vw; min-height: 30px; font-size: 12px;
-    }
-    #csvModal table { border-collapse: collapse; width: 100%; margin: 5px 0; background: #fcfcfc; font-size: 12px; }
-    #csvModal th, #csvModal td { border: 1px solid #d6d6d6; padding: 2px 6px; text-align: center; font-size: 12px; }
-    #csvModal th { background: #f7f7f9; font-weight: bold; }
-    #closeModalBtn { float: right; margin-top: -10px; margin-right: -7px; border: none; background: none; font-size: 16px; color: #888; cursor: pointer; }
-    #closeModalBtn:hover { color: #333; }
-    .heatmap-section { margin-top: 12px; padding-bottom: 18px; border-bottom: 1px solid #eee; font-size: 12px;}
-    .heatmap-section:last-child { border-bottom: none; }
-    .currentMaxH-label { font-weight: bold; margin-left:8px; font-size: 12px;}
-    .symbol-multiselect {
-      position: relative; width: 180px; max-width: 100%; z-index: 11; display: inline-block; font-size: 12px;
-    }
-    .symbol-multiselect .selected-label {
-      border: 1px solid #bbb; border-radius: 5px; padding: 2px 6px; min-height: 18px;
-      cursor: pointer; font-size: 12px; background: #fafbfc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .symbol-multiselect .selected-label:after {
-      content: "▼"; float: right; font-size: 10px; color: #888; margin-left: 4px;
-    }
-    .symbol-multiselect.open .selected-label { border-color: #1884f7; background: #f5faff;}
-    .symbol-multiselect-list {
-      position: absolute; top: 107%; left: 0; right: 0; min-width: 160px;
-      max-height: 220px; background: #fff; border: 1px solid #1884f7; border-radius: 6px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.07); padding: 4px 0 4px 0; overflow-y: auto; z-index: 99; font-size: 12px;
-    }
-    .symbol-multiselect-list label { display: flex; align-items: center; padding: 2px 6px; cursor: pointer; white-space: nowrap; transition: background 0.07s; font-size: 12px; }
-    .symbol-multiselect-list label:hover { background: #f2f6ff; }
-    .symbol-multiselect-list input[type=checkbox] { margin-right: 5px; }
-    input[type="range"], input[type="number"], select, button, input[type="file"], label, input[type="checkbox"] {
-      font-size: 12px; font-family: inherit; padding: 1px 2px;
-    }
-    .colorbar-input-container {
-      position: absolute; left: unset; right: 13px; z-index: 5;
-      pointer-events: none; width: 30px;
-    }
-    .colorbar-input {
-      pointer-events: auto; width: 30px; font-size: 12px;
-      border: 1px solid #bbb; border-radius: 3px; margin-bottom: 0px;
-      text-align: right; background: #fff;
-    }
-    .colorbar-label {
-      font-size: 11px; font-weight: bold; color: #444;
-      margin-bottom: 2px; margin-top: 2px; display: block; text-align: right;
-      user-select: none; pointer-events: none;
-    }
-  </style>
+
+  <!-- Chapter 1: LIBRARIES & CSS -->
+    <!-- 1.1: GLOBAL CSS -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+      html, body { font-size: 12px; font-family: sans-serif; margin: 12px; }
+      .header { display: flex; justify-content: space-between; align-items: flex-start; }
+      .controls { flex: 1; }
+      .right-controls {
+        min-width: 220px;
+        display: flex; flex-direction: column; align-items: flex-start; gap: 6px; font-size: 12px;
+      }
+      .rc-row { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+      .rc-row label, .csv-link, .export-btn, .select-note { font-size: 12px; }
+      .csv-link { color: #0074d9; text-decoration: underline; cursor: pointer; font-weight: 600; margin: 0 2px;}
+      .export-btn {
+        background: #1884f7; color: white; border: none; border-radius: 5px; padding: 2px 12px;
+        font-size: 12px; cursor: pointer; font-weight: 500; margin-top: 0;
+        transition: background 0.13s;
+      }
+      .export-btn:hover { background: #0059b2; }
+      .select-note { color: #189c2f; margin-left: 4px; }
+      #csvModal { display: none; position: fixed; z-index: 12; left: 0; top: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.13); align-items: center; justify-content: center;}
+      #csvModal .modal-content {
+        background: #fff; border-radius: 6px; box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+        padding: 12px 16px 10px 16px; min-width: 190px; max-width: 96vw; min-height: 30px; font-size: 12px;
+      }
+      #csvModal table { border-collapse: collapse; width: 100%; margin: 5px 0; background: #fcfcfc; font-size: 12px; }
+      #csvModal th, #csvModal td { border: 1px solid #d6d6d6; padding: 2px 6px; text-align: center; font-size: 12px; }
+      #csvModal th { background: #f7f7f9; font-weight: bold; }
+      #closeModalBtn { float: right; margin-top: -10px; margin-right: -7px; border: none; background: none; font-size: 16px; color: #888; cursor: pointer; }
+      #closeModalBtn:hover { color: #333; }
+      .heatmap-section { margin-top: 12px; padding-bottom: 18px; border-bottom: 1px solid #eee; font-size: 12px;}
+      .heatmap-section:last-child { border-bottom: none; }
+      .currentMaxH-label { font-weight: bold; margin-left:8px; font-size: 12px;}
+      .symbol-multiselect {
+        position: relative; width: 180px; max-width: 100%; z-index: 11; display: inline-block; font-size: 12px;
+      }
+      .symbol-multiselect .selected-label {
+        border: 1px solid #bbb; border-radius: 5px; padding: 2px 6px; min-height: 18px;
+        cursor: pointer; font-size: 12px; background: #fafbfc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .symbol-multiselect .selected-label:after {
+        content: "▼"; float: right; font-size: 10px; color: #888; margin-left: 4px;
+      }
+      .symbol-multiselect.open .selected-label { border-color: #1884f7; background: #f5faff;}
+      .symbol-multiselect-list {
+        position: absolute; top: 107%; left: 0; right: 0; min-width: 160px;
+        max-height: 220px; background: #fff; border: 1px solid #1884f7; border-radius: 6px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.07); padding: 4px 0 4px 0; overflow-y: auto; z-index: 99; font-size: 12px;
+      }
+      .symbol-multiselect-list label { display: flex; align-items: center; padding: 2px 6px; cursor: pointer; white-space: nowrap; transition: background 0.07s; font-size: 12px; }
+      .symbol-multiselect-list label:hover { background: #f2f6ff; }
+      .symbol-multiselect-list input[type=checkbox] { margin-right: 5px; }
+      input[type="range"], input[type="number"], select, button, input[type="file"], label, input[type="checkbox"] {
+        font-size: 12px; font-family: inherit; padding: 1px 2px;
+      }
+      .colorbar-input-container {
+        position: absolute; left: unset; right: 13px; z-index: 5;
+        pointer-events: none; width: 30px;
+      }
+      .colorbar-input {
+        pointer-events: auto; width: 30px; font-size: 12px;
+        border: 1px solid #bbb; border-radius: 3px; margin-bottom: 0px;
+        text-align: right; background: #fff;
+      }
+      .colorbar-label {
+        font-size: 11px; font-weight: bold; color: #444;
+        margin-bottom: 2px; margin-top: 2px; display: block; text-align: right;
+        user-select: none; pointer-events: none;
+      }
+    </style>
   <!-- End Chapter 1 -->
+</head>
+
 
 </head>
 <body>
