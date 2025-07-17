@@ -510,7 +510,7 @@ proximityGridSelect.addEventListener('change', function() {
 });
 
 
-// 5.10: Draw Heatmaps (with highlight overlay that does NOT distort heatmap aspect)
+// 5.10: Draw Heatmaps (with direct symbol unselect in heatmap area)
 function drawHeatmaps() {
   heatmapsContainer.innerHTML = '';
   if (!selectedSymbols.length) {
@@ -551,7 +551,7 @@ function drawHeatmaps() {
     let zminVal = window.colorbarMinGlobal;
     let zmaxVal = window.colorbarMaxGlobal;
 
-    // --- Calculate base H, then apply proximity grid averaging ---
+    // 5.10.1 --- Calculate base H, then apply proximity grid averaging ---
     const baseH = computeH(arM, mdM, floor, minMD);
     const H = computeProximityGridAverage(baseH, proximityGridSize);
 
@@ -572,17 +572,23 @@ function drawHeatmaps() {
     }
     if (maxH > overallMaxH) overallMaxH = maxH;
 
-    // --- Layout: Fund name between ticker/source and heatmap, plus per-heatmap Max H
+    // 5.10.2 --- Layout: Fund name between ticker/source and heatmap, plus per-heatmap Max H
     const fundName = tickerNameMap[symbol] || "";
     const section = document.createElement('div');
     section.className = 'heatmap-section';
     section.innerHTML = `
       <div style="position:relative;">
-        <div id="heatmap-title-${plotIdx}" style="text-align:center;">
-          <div style="font-size:18px;color:#1b365d;font-weight:500;margin-bottom:0px;">${symbolSource}</div>
-          ${fundName ? `<div style="font-size:12px; color:#2e4057; margin-top:2px; margin-bottom:5px;">${fundName}</div>` : ""}
-          <div style="font-size:12px; font-weight:bold; color:#1e522e; margin-bottom:8px;">Current Max H: ${maxH === -Infinity ? '--' : maxH.toFixed(3)}</div>
+        <div id="heatmap-title-${plotIdx}" style="text-align:center;display:flex;align-items:center;justify-content:center;">
+          <div style="font-size:18px;color:#1b365d;font-weight:500;margin-bottom:0px; margin-right:7px;">
+            ${symbolSource}
+          </div>
+          <select style="margin-right:6px; height:20px; font-size:12px;" class="heatmap-unselect" data-symidx="${plotIdx}" title="Unselect this symbol">
+            <option value="">☰</option>
+            <option value="remove">Remove</option>
+          </select>
         </div>
+        ${fundName ? `<div style="text-align:center;font-size:12px; color:#2e4057; margin-top:2px; margin-bottom:5px;">${fundName}</div>` : ""}
+        <div style="text-align:center;font-size:12px; font-weight:bold; color:#1e522e; margin-bottom:8px;">Current Max H: ${maxH === -Infinity ? '--' : maxH.toFixed(3)}</div>
         <div style="display:flex; flex-direction:row; align-items:center;">
           <div id="yHoverBox-${plotIdx}" style="width:45px; display:flex; flex-direction:column; align-items:center; justify-content:center; height:56vh;">
             <span style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; writing-mode: vertical-lr; transform: rotate(180deg); font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; letter-spacing:0.5px;">
@@ -610,27 +616,19 @@ function drawHeatmaps() {
     `;
     heatmapsContainer.appendChild(section);
 
-    // --- Highlight region as a circle or rectangle SHAPE, in data coordinates ---
+    // 5.10.3 --- Highlight region as a circle or rectangle SHAPE, in data coordinates ---
     let shapes = [];
     if (maxI !== null && maxJ !== null) {
-      // Center cell: (xs[maxJ], ys[maxI])
-      // Determine bounds in data units for the grid
       const xCells = xs.length, yCells = ys.length;
       const half = Math.floor(proximityGridSize / 2);
-
-      // Find the data min/max coordinates for the region (accounting for grid edges)
       const x0idx = Math.max(0, maxJ - half), x1idx = Math.min(xCells - 1, maxJ + half);
       const y0idx = Math.max(0, maxI - half), y1idx = Math.min(yCells - 1, maxI + half);
       const x0 = xs[x0idx], x1 = xs[x1idx];
       const y0 = ys[y0idx], y1 = ys[y1idx];
-
-      // Make a circle that fits inside the rectangle covering the grid
       const cx = xs[maxJ], cy = ys[maxI];
       const rx = Math.abs(x1 - x0) / 2 || 0.5;
       const ry = Math.abs(y1 - y0) / 2 || 0.5;
       const r = Math.max(rx, ry);
-
-      // Draw a circle overlay with partial opacity, in data coordinates
       shapes.push({
         type: "circle",
         xref: "x",
@@ -643,7 +641,7 @@ function drawHeatmaps() {
       });
     }
 
-    // --- Main heatmap plot ---
+    // 5.10.4 --- Main heatmap plot ---
     const heatDiv = section.querySelector(`#heatmap-${plotIdx}`);
     Plotly.newPlot(heatDiv, [
       {
@@ -665,22 +663,22 @@ function drawHeatmaps() {
       xaxis: {
         title: '', tickfont: {size:12}, titlefont:{size:12},
         range: [Math.min(...xs), Math.max(...xs)],
-        constrain: 'range', // This keeps the axis fixed!
+        constrain: 'range',
         scaleanchor: 'y',
         scaleratio: 1
       },
       yaxis: {
         title: '', tickfont: {size:12}, titlefont:{size:12},
         range: [Math.min(...ys), Math.max(...ys)],
-        constrain: 'range', // This keeps the axis fixed!
+        constrain: 'range',
         scaleanchor: 'x',
         scaleratio: 1
       },
       annotations: [],
-      shapes // <-- Our overlay!
+      shapes
     }, { responsive: true });
 
-    // --- GLOBAL colorbar min/max event handlers (sync all boxes, update all charts)
+    // 5.10.5 --- GLOBAL colorbar min/max event handlers (sync all boxes, update all charts)
     setTimeout(() => {
       const minInput = document.getElementById(`colorbar-min-${plotIdx}`);
       const maxInput = document.getElementById(`colorbar-max-${plotIdx}`);
@@ -702,10 +700,9 @@ function drawHeatmaps() {
       }
     }, 0);
 
-    // --- Custom crosshair values (RSI and Days)
+    // 5.10.6 --- Custom crosshair values (RSI and Days)
     const hoverX = section.querySelector(`#hoverXValue-${plotIdx}`);
     const hoverY = section.querySelector(`#hoverYValue-${plotIdx}`);
-
     heatDiv.on('plotly_hover', function(eventData) {
       var pt = eventData.points[0];
       hoverX.innerText = pt.x;
@@ -716,7 +713,24 @@ function drawHeatmaps() {
       hoverY.innerText = '';
     });
   });
+
+  // 5.10.7 --- Add symbol unselect event handler for each select in the heatmap area ---
+  document.querySelectorAll('.heatmap-unselect').forEach(sel => {
+    sel.onchange = function() {
+      if (this.value === 'remove') {
+        const idx = parseInt(this.getAttribute('data-symidx'));
+        if (!isNaN(idx) && idx < selectedSymbols.length) {
+          const symToRemove = selectedSymbols[idx];
+          selectedSymbols = selectedSymbols.filter((s, j) => j !== idx);
+          populateSymbols();
+        }
+      }
+      this.value = ''; // reset to default
+    };
+  });
 }
+// End Chapter 5.10
+
 
 
 
