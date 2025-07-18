@@ -16,8 +16,12 @@
   <button id="download-csv" style="display:none">Download CSV</button>
   <pre id="progress"></pre>
   <script>
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
     function buildPayload(ticker, lookback, threshold, startDate, endDate) {
-      // Adapt to your exact Testfol.io API needs
+      // You can modify this payload to match your strategy needs
       return {
         name: `Auto ${ticker} LB${lookback} T${threshold}`,
         start_date: startDate,
@@ -58,6 +62,7 @@
 
     document.getElementById('batch-form').onsubmit = async function(e) {
       e.preventDefault();
+      document.getElementById('download-csv').style.display = 'none';
       const tickers = document.getElementById('tickers').value.split(',').map(s=>s.trim());
       const lbMin = +document.getElementById('lookback-min').value;
       const lbMax = +document.getElementById('lookback-max').value;
@@ -85,17 +90,20 @@
                 body: JSON.stringify(payload)
               });
               const data = await res.json();
-              // You might want to filter/extract specific fields here
               results.push({
                 ticker, lookback, threshold,
                 cagr: data?.stats?.[0]?.cagr,
                 max_drawdown: data?.stats?.[0]?.max_drawdown,
                 end_val: data?.stats?.[0]?.end_val
-                // add more as needed!
+                // add more fields as needed
               });
             } catch (err) {
               progress += `Error: ${err}\n`;
+              document.getElementById('progress').textContent = progress;
             }
+
+            // Add a 2-second delay between each request!
+            await sleep(2000);
           }
         }
       }
