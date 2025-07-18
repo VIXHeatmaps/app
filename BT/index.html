@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Testfol.io Batch Backtester</title>
+</head>
+<body>
+  <h1>Batch Strategy Backtester</h1>
+  <form id="batch-form">
+    Tickers: <input id="tickers" value="SPYSIM,XLKSIM"><br>
+    Lookback: <input id="lookback-min" value="5"> to <input id="lookback-max" value="25"> by <input id="lookback-step" value="5"><br>
+    Threshold: <input id="thresh-min" value="30"> to <input id="thresh-max" value="90"> by <input id="thresh-step" value="10"><br>
+    Start Date: <input id="start-date" value="2020-01-01"><br>
+    End Date: <input id="end-date" value="2024-01-01"><br>
+    <button type="submit">Run All Backtests</button>
+  </form>
+  <button id="download-csv" style="display:none">Download CSV</button>
+  <pre id="progress"></pre>
+  <script>
+    function buildPayload(ticker, lookback, threshold, startDate, endDate) {
+      // Adapt to your exact Testfol.io API needs
+      return {
+        name: `Auto ${ticker} LB${lookback} T${threshold}`,
+        start_date: startDate,
+        end_date: endDate,
+        start_val: 10000,
+        trading_cost: 0,
+        rolling_window: 60,
+        trading_freq: "Daily",
+        signals: [
+          {
+            name: "A",
+            indicator_1: {type: "RSI", ticker, value: null, lookback, delay: null},
+            comparison: ">",
+            indicator_2: {type: "Threshold", ticker: "", value: threshold, lookback: null, delay: null},
+            tolerance: null
+          }
+        ],
+        allocations: [
+          {
+            name: "XLK ALLOC",
+            signals: ["A"],
+            ops: [],
+            nots: [false],
+            tickers: [{ticker, percent: 100}],
+            drag: 1
+          },
+          {
+            name: "CASH ALLOC",
+            signals: [],
+            ops: [],
+            nots: [],
+            tickers: [{ticker: "CASHX", percent: 100}],
+            drag: 1
+          }
+        ]
+      };
+    }
+
+    document.getElementById('batch-form').onsubmit = async function(e) {
+      e.preventDefault();
+      const tickers = document.getElementById('tickers').value.split(',').map(s=>s.trim());
+      const lbMin = +document.getElementById('lookback-min').value;
+      const lbMax = +document.getElementById('lookback-max').value;
+      const lbStep = +document.getElementById('lookback-step').value;
+      const thMin = +document.getElementById('thresh-min').value;
+      const thMax = +document.getElementById('thresh-max').value;
+      const thStep = +document.getElementById('thresh-step').value;
+      const startDate = document.getElementById('start-date').value;
+      const endDate = document.getElementById('end-date').value;
+
+      let results = [];
+      let progress = '';
+
+      for (let ticker of tickers) {
+        for (let lookback = lbMin; lookback <= lbMax; lookback += lbStep) {
+          for (let threshold = thMin; threshold <= thMax; threshold += thStep) {
+            progress += `Testing: ${ticker}, Lookback: ${lookback}, Threshold: ${threshold}\n`;
+            document.getElementById('progress').textContent = progress;
+            const payload = buildPayload(ticker, lookback, threshold, startDate, endDate);
+
+            try {
+              const res = await fetch('https://testfol.io/api/tactical', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(payload)
+              });
+              const data = await res.json();
+              // You might want to filter/extract specific fields here
+              results.push({
+                ticker, lookback, threshold,
+                cagr: data?.stats?.[0]?.cagr,
+                max_drawdown: data?.stats?.[0]?.max_drawdown,
+                end_val: data?.stats?.[0]?.end_val
+                // add more as needed!
+              });
+            } catch (err) {
+              progress += `Error: ${err}\n`;
+            }
+          }
+        }
+      }
+      // Prepare CSV
+      const header = "ticker,lookback,threshold,cagr,max_drawdown,end_val\n";
+      const csv = header + results.map(r => [r.ticker, r.lookback, r.threshold, r.cagr, r.max_drawdown, r.end_val].join(',')).join('\n');
+      window.csvData = csv;
+      document.getElementById('download-csv').style.display = '';
+      document.getElementById('progress').textContent += "\nDone! Click Download CSV.";
+    };
+
+    document.getElementById('download-csv').onclick = function() {
+      const blob = new Blob([window.csvData], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'backtest_results.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+  </script>
+</body>
+</html>
