@@ -76,4 +76,72 @@
       const lbMax = +document.getElementById('lookback-max').value;
       const lbStep = +document.getElementById('lookback-step').value;
       const thMin = +document.getElementById('thresh-min').value;
-      const thMax = +document.getElementB
+      const thMax = +document.getElementById('thresh-max').value;
+      const thStep = +document.getElementById('thresh-step').value;
+      const startDate = document.getElementById('start-date').value;
+      const endDate = document.getElementById('end-date').value;
+      const comparison = document.getElementById('comparison').value;
+
+      let results = [];
+      let progress = '';
+
+      for (let signalTicker of signalTickers) {
+        for (let trueTicker of trueTickers) {
+          for (let falseTicker of falseTickers) {
+            for (let lookback = lbMin; lookback <= lbMax; lookback += lbStep) {
+              for (let threshold = thMin; threshold <= thMax; threshold += thStep) {
+                progress += `RSI: ${signalTicker}, If-True: ${trueTicker}, If-False: ${falseTicker}, LB: ${lookback}, TH: ${threshold}, Comparison: ${comparison}\n`;
+                document.getElementById('progress').textContent = progress;
+                const payload = buildPayload(signalTicker, trueTicker, falseTicker, lookback, threshold, startDate, endDate, comparison);
+
+                try {
+                  const res = await fetch('https://testfol.io/api/tactical', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify(payload)
+                  });
+                  const data = await res.json();
+                  results.push({
+                    signal_ticker: signalTicker,
+                    true_ticker: trueTicker,
+                    false_ticker: falseTicker,
+                    lookback, threshold, comparison,
+                    cagr: data?.stats?.[0]?.cagr,
+                    max_drawdown: data?.stats?.[0]?.max_drawdown,
+                    end_val: data?.stats?.[0]?.end_val
+                  });
+                } catch (err) {
+                  progress += `Error: ${err}\n`;
+                  document.getElementById('progress').textContent = progress;
+                }
+
+                await sleep(1750);
+              }
+            }
+          }
+        }
+      }
+
+      // Prepare CSV
+      const header = "signal_ticker,true_ticker,false_ticker,lookback,threshold,comparison,cagr,max_drawdown,end_val\n";
+      const csv = header + results.map(r => [
+        r.signal_ticker, r.true_ticker, r.false_ticker, r.lookback, r.threshold, r.comparison,
+        r.cagr, r.max_drawdown, r.end_val
+      ].join(',')).join('\n');
+      window.csvData = csv;
+      document.getElementById('download-csv').style.display = '';
+      document.getElementById('progress').textContent += "\nDone! Click Download CSV.";
+    };
+
+    document.getElementById('download-csv').onclick = function() {
+      const blob = new Blob([window.csvData], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'backtest_results.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+  </script>
+</body>
+</html>
