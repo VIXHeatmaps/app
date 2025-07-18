@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Testfol.io Batch Backtester</title>
+  <title>Testfol.io Batch Backtester (3-ticker)</title>
 </head>
 <body>
   <h1>Batch Strategy Backtester</h1>
   <form id="batch-form">
-    Tickers: <input id="tickers" value="SPYSIM,XLKSIM"><br>
+    Signal ticker(s) for RSI: <input id="signal-tickers" value="SPYSIM,XLKSIM"><br>
+    Allocation ticker(s) if TRUE: <input id="true-tickers" value="XLKSIM"><br>
+    Allocation ticker(s) if FALSE: <input id="false-tickers" value="CASHX"><br>
     Lookback: <input id="lookback-min" value="5"> to <input id="lookback-max" value="25"> by <input id="lookback-step" value="5"><br>
     Threshold: <input id="thresh-min" value="30"> to <input id="thresh-max" value="90"> by <input id="thresh-step" value="10"><br>
     Start Date: <input id="start-date" value="2020-01-01"><br>
@@ -20,10 +22,9 @@
       return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    function buildPayload(ticker, lookback, threshold, startDate, endDate) {
-      // You can modify this payload to match your strategy needs
+    function buildPayload(signalTicker, trueTicker, falseTicker, lookback, threshold, startDate, endDate) {
       return {
-        name: `Auto ${ticker} LB${lookback} T${threshold}`,
+        name: `Auto ${signalTicker}->${trueTicker}/${falseTicker} LB${lookback} T${threshold}`,
         start_date: startDate,
         end_date: endDate,
         start_val: 10000,
@@ -33,7 +34,7 @@
         signals: [
           {
             name: "A",
-            indicator_1: {type: "RSI", ticker, value: null, lookback, delay: null},
+            indicator_1: {type: "RSI", ticker: signalTicker, value: null, lookback, delay: null},
             comparison: ">",
             indicator_2: {type: "Threshold", ticker: "", value: threshold, lookback: null, delay: null},
             tolerance: null
@@ -41,19 +42,19 @@
         ],
         allocations: [
           {
-            name: "XLK ALLOC",
+            name: trueTicker,
             signals: ["A"],
             ops: [],
             nots: [false],
-            tickers: [{ticker, percent: 100}],
+            tickers: [{ticker: trueTicker, percent: 100}],
             drag: 1
           },
           {
-            name: "CASH ALLOC",
+            name: falseTicker,
             signals: [],
             ops: [],
             nots: [],
-            tickers: [{ticker: "CASHX", percent: 100}],
+            tickers: [{ticker: falseTicker, percent: 100}],
             drag: 1
           }
         ]
@@ -63,7 +64,9 @@
     document.getElementById('batch-form').onsubmit = async function(e) {
       e.preventDefault();
       document.getElementById('download-csv').style.display = 'none';
-      const tickers = document.getElementById('tickers').value.split(',').map(s=>s.trim());
+      const signalTickers = document.getElementById('signal-tickers').value.split(',').map(s=>s.trim());
+      const trueTickers = document.getElementById('true-tickers').value.split(',').map(s=>s.trim());
+      const falseTickers = document.getElementById('false-tickers').value.split(',').map(s=>s.trim());
       const lbMin = +document.getElementById('lookback-min').value;
       const lbMax = +document.getElementById('lookback-max').value;
       const lbStep = +document.getElementById('lookback-step').value;
@@ -76,40 +79,50 @@
       let results = [];
       let progress = '';
 
-      for (let ticker of tickers) {
-        for (let lookback = lbMin; lookback <= lbMax; lookback += lbStep) {
-          for (let threshold = thMin; threshold <= thMax; threshold += thStep) {
-            progress += `Testing: ${ticker}, Lookback: ${lookback}, Threshold: ${threshold}\n`;
-            document.getElementById('progress').textContent = progress;
-            const payload = buildPayload(ticker, lookback, threshold, startDate, endDate);
+      for (let signalTicker of signalTickers) {
+        for (let trueTicker of trueTickers) {
+          for (let falseTicker of falseTickers) {
+            for (let lookback = lbMin; lookback <= lbMax; lookback += lbStep) {
+              for (let threshold = thMin; threshold <= thMax; threshold += thStep) {
+                progress += `RSI: ${signalTicker}, If-True: ${trueTicker}, If-False: ${falseTicker}, LB: ${lookback}, TH: ${threshold}\n`;
+                document.getElementById('progress').textContent = progress;
+                const payload = buildPayload(signalTicker, trueTicker, falseTicker, lookback, threshold, startDate, endDate);
 
-            try {
-              const res = await fetch('https://testfol.io/api/tactical', {
-                method: 'POST',
-                headers: {'Content-Type':'application/json'},
-                body: JSON.stringify(payload)
-              });
-              const data = await res.json();
-              results.push({
-                ticker, lookback, threshold,
-                cagr: data?.stats?.[0]?.cagr,
-                max_drawdown: data?.stats?.[0]?.max_drawdown,
-                end_val: data?.stats?.[0]?.end_val
-                // add more fields as needed
-              });
-            } catch (err) {
-              progress += `Error: ${err}\n`;
-              document.getElementById('progress').textContent = progress;
+                try {
+                  const res = await fetch('https://testfol.io/api/tactical', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify(payload)
+                  });
+                  const data = await res.json();
+                  results.push({
+                    signal_ticker: signalTicker,
+                    true_ticker: trueTicker,
+                    false_ticker: falseTicker,
+                    lookback, threshold,
+                    cagr: data?.stats?.[0]?.cagr,
+                    max_drawdown: data?.stats?.[0]?.max_drawdown,
+                    end_val: data?.stats?.[0]?.end_val
+                    // add more fields as needed!
+                  });
+                } catch (err) {
+                  progress += `Error: ${err}\n`;
+                  document.getElementById('progress').textContent = progress;
+                }
+
+                await sleep(2000); // 2-second delay between requests
+              }
             }
-
-            // Add a 2-second delay between each request!
-            await sleep(2000);
           }
         }
       }
+
       // Prepare CSV
-      const header = "ticker,lookback,threshold,cagr,max_drawdown,end_val\n";
-      const csv = header + results.map(r => [r.ticker, r.lookback, r.threshold, r.cagr, r.max_drawdown, r.end_val].join(',')).join('\n');
+      const header = "signal_ticker,true_ticker,false_ticker,lookback,threshold,cagr,max_drawdown,end_val\n";
+      const csv = header + results.map(r => [
+        r.signal_ticker, r.true_ticker, r.false_ticker, r.lookback, r.threshold,
+        r.cagr, r.max_drawdown, r.end_val
+      ].join(',')).join('\n');
       window.csvData = csv;
       document.getElementById('download-csv').style.display = '';
       document.getElementById('progress').textContent += "\nDone! Click Download CSV.";
