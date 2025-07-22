@@ -85,17 +85,19 @@
 <!-- Chapter 2: LAYOUT & CONTROLS -->
 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
   <div class="controls">
-    <!-- 2.1: Metric Display (with Read Me button) -->
-    <div style="font-size: 14px; font-style: italic; margin-bottom: 10px; display:flex; align-items:center;">
-      <div>
-        <b>Metric:</b>
-        H = (AR – AR<sub>min</sub>) / max(MD, MD<sub>min</sub>)
-      </div>
-      <button id="readMeBtn"
-        style="margin-left:16px; font-size:13px; background:#f8f8f8; border:1px solid #bcbcbc; border-radius:6px; padding:2px 14px; cursor:pointer; font-weight:500;">
-        Read Me
-      </button>
-    </div>
+ <!-- 2.1: Metric Display (with Read Me button) -->
+<div style="font-size: 14px; font-style: italic; margin-bottom: 10px; display:flex; align-items:center;">
+  <div>
+    <b>Metric:</b>
+    H = (<span style="color:#1884f7">AR</span> if <span style="color:#1884f7">AR</span> ≥ <span style="color:#e0771a">AR<sub>min</sub></span> else 0)
+    / max(<span style="color:#8c3fcf">MD</span>, <span style="color:#e0771a">MD<sub>min</sub></span>)
+  </div>
+  <button id="readMeBtn"
+    style="margin-left:16px; font-size:13px; background:#f8f8f8; border:1px solid #bcbcbc; border-radius:6px; padding:2px 14px; cursor:pointer; font-weight:500;">
+    Read Me
+  </button>
+</div>
+
 
   <!-- 2.2: Symbol MultiSelect (with Select All/Unselect All & Sort by Max H) -->
 <div style="font-weight:bold; margin-bottom:6px;">
