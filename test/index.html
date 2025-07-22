@@ -739,13 +739,16 @@ function drawHeatmaps() {
 
 
 
-  // 5.11: Compute H Function
+  // 5.11: Compute H Function (AR Min acts as a floor, not subtraction)
   function computeH(ar, md, floor, minMD) {
     return ar.map((row, i) => row.map((v, j) => {
       if (v == null) return null;
-      return (v - floor) / Math.max(md[i][j], minMD);
+      // New logic: if AR < floor, treat as 0
+      const adjAR = (v < floor) ? 0 : v;
+      return (adjAR) / Math.max(md[i][j], minMD);
     }));
   }
+
 
   // 5.11.1: Compute Proximity Grid Average Function
   function computeProximityGridAverage(mat, windowSize) {
